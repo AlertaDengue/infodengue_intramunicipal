@@ -1,0 +1,693 @@
+---
+title: "Boletim Municipal - {{municipio_nome}}/{{uf}}"
+format:
+  pdf:
+    fig-width: 7
+    keep-tex: false
+params:
+  municipio_nome: "{{municipio_nome}}"
+  uf: "{{uf}}"
+  municipio_geocodigo: {{municipio_geocodigo}}
+  ano: {{ano}}
+  populacao: {{populacao}}
+  notificacoes_path: "{{notificacoes_path}}"
+  historico_alerta_path: "{{historico_alerta_path}}"
+  historico_alerta_dengue_path: "{{historico_alerta_dengue_path}}"
+  historico_alerta_chikungunya_path: "{{historico_alerta_chikungunya_path}}"
+  referencia_path: "{{referencia_path}}"
+  col_bairro_ref: "{{col_bairro_ref}}"
+  col_bairro_id_ref: "{{col_bairro_id_ref}}"
+  col_distrito_ref: "{{col_distrito_ref}}"
+  col_pop_ref: "{{col_pop_ref}}"
+  col_geometry_ref: "{{col_geometry_ref}}"
+editor: visual
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  dev = "png",
+  dpi = 300,
+  fig.align = "center"
+)
+```
+
+```{r pacotes, include=FALSE}
+pacman::p_load(
+  tidyverse,
+  sf,
+  lubridate,
+  ggpubr,
+  cowplot,
+  gt,
+  kableExtra,
+  arrow,
+  fuzzyjoin,
+  AlertTools
+)
+
+pkgload::load_all("..", export_all = FALSE, quiet = TRUE)
+```
+
+```{r funcoes, include=FALSE}
+arquivo_informado <- function(path) {
+  !is.null(path) && !is.na(path) && nzchar(path)
+}
+
+validar_arquivo <- function(path, nome) {
+  if (!arquivo_informado(path)) {
+    stop(nome, " nao foi informado.", call. = FALSE)
+  }
+
+  if (!file.exists(path)) {
+    stop(nome, " nao encontrado: ", path, call. = FALSE)
+  }
+
+  invisible(path)
+}
+
+validar_colunas <- function(data, colunas, nome) {
+  faltantes <- setdiff(colunas, names(data))
+
+  if (length(faltantes) > 0) {
+    stop(
+      nome,
+      " nao contem as colunas obrigatorias: ",
+      paste(faltantes, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  invisible(data)
+}
+
+ler_tabela_local <- function(path, nome = "arquivo") {
+  validar_arquivo(path, nome)
+  ext <- tolower(tools::file_ext(path))
+
+  switch(
+    ext,
+    csv = readr::read_csv(path, show_col_types = FALSE),
+    parquet = arrow::read_parquet(path),
+    rds = readRDS(path),
+    rda = {
+      env <- new.env(parent = emptyenv())
+      objs <- load(path, envir = env)
+      if (length(objs) != 1) {
+        stop(nome, " deve conter exatamente um objeto quando usado como RData/Rda.", call. = FALSE)
+      }
+      env[[objs]]
+    },
+    rdata = {
+      env <- new.env(parent = emptyenv())
+      objs <- load(path, envir = env)
+      if (length(objs) != 1) {
+        stop(nome, " deve conter exatamente um objeto quando usado como RData/Rda.", call. = FALSE)
+      }
+      env[[objs]]
+    },
+    stop("Extensao nao suportada para ", nome, ": ", ext, call. = FALSE)
+  )
+}
+
+ler_referencia_local <- function(path) {
+  validar_arquivo(path, "referencia_path")
+  ext <- tolower(tools::file_ext(path))
+
+  if (ext %in% c("rds")) {
+    return(readRDS(path))
+  }
+
+  if (ext %in% c("rda", "rdata")) {
+    env <- new.env(parent = emptyenv())
+    objs <- load(path, envir = env)
+
+    if ("ref_submunicipal" %in% objs) {
+      return(env$ref_submunicipal)
+    }
+
+    if ("df_intra_ref" %in% objs) {
+      return(env$df_intra_ref)
+    }
+
+    if (length(objs) == 1) {
+      return(env[[objs]])
+    }
+
+    stop(
+      "referencia_path em RData deve conter ref_submunicipal, df_intra_ref, ou apenas um objeto.",
+      call. = FALSE
+    )
+  }
+
+  ler_tabela_local(path, "referencia_path")
+}
+
+preparar_notificacoes <- function(path, municipio_geocodigo) {
+  notificacoes <- ler_tabela_local(path, "notificacoes_path")
+
+  colunas_obrigatorias <- c(
+    "municipio_geocodigo", "dt_notific", "dt_sin_pri", "dt_digita",
+    "se_notif", "ano_notif", "cid10_codigo", "id_bairro",
+    "nm_bairro", "nu_notific"
+  )
+
+  validar_colunas(notificacoes, colunas_obrigatorias, "notificacoes")
+
+  notificacoes %>%
+    filter(.data$municipio_geocodigo == municipio_geocodigo) %>%
+    mutate(
+      sem_not = paste0(.data$ano_notif, sprintf("%02d", as.integer(.data$se_notif))),
+      arbo = case_when(
+        .data$cid10_codigo == "A90" ~ "dengue",
+        .data$cid10_codigo == "A92.0" ~ "chikon",
+        .data$cid10_codigo == "A928" ~ "zika",
+        TRUE ~ NA_character_
+      ),
+      dt_digita = as.Date(.data$dt_digita),
+      dt_sin_pri = as.Date(.data$dt_sin_pri),
+      dt_notific = as.Date(.data$dt_notific)
+    ) %>%
+    filter(!is.na(.data$arbo)) %>%
+    arrange(.data$sem_not)
+}
+
+preparar_historico_alerta <- function(path_unico,
+                                      path_dengue,
+                                      path_chikungunya) {
+  colunas_obrigatorias <- c("SE", "casos", "p_inc100k", "nivel", "Rt", "tempmin")
+
+  if (arquivo_informado(path_unico)) {
+    historico <- ler_tabela_local(path_unico, "historico_alerta_path")
+    validar_colunas(historico, c(colunas_obrigatorias, "arbo"), "historico_alerta")
+    return(historico %>% mutate(SE = as.numeric(.data$SE)) %>% arrange(.data$arbo, .data$SE))
+  }
+
+  dengue <- ler_tabela_local(path_dengue, "historico_alerta_dengue_path") %>%
+    validar_colunas(colunas_obrigatorias, "historico_alerta_dengue") %>%
+    mutate(arbo = "dengue")
+
+  chikungunya <- ler_tabela_local(path_chikungunya, "historico_alerta_chikungunya_path") %>%
+    validar_colunas(colunas_obrigatorias, "historico_alerta_chikungunya") %>%
+    mutate(arbo = "chikon")
+
+  bind_rows(dengue, chikungunya) %>%
+    mutate(SE = as.numeric(.data$SE)) %>%
+    arrange(.data$arbo, .data$SE)
+}
+
+preparar_referencia <- function(path,
+                                col_bairro,
+                                col_bairro_id,
+                                col_distrito,
+                                col_pop,
+                                col_geometry) {
+  ref <- ler_referencia_local(path)
+
+  validar_colunas(
+    ref,
+    c(col_bairro, col_bairro_id, col_distrito, col_pop, col_geometry),
+    "referencia_submunicipal"
+  )
+
+  if (!inherits(ref, "sf")) {
+    ref <- sf::st_as_sf(ref, sf_column_name = col_geometry)
+  } else if (attr(ref, "sf_column") != col_geometry) {
+    ref <- sf::st_set_geometry(ref, col_geometry)
+  }
+
+  ref %>%
+    rename(
+      nome_bairr = all_of(col_bairro),
+      id_bairro = all_of(col_bairro_id),
+      distrito = all_of(col_distrito),
+      pop = all_of(col_pop),
+      geometry = all_of(col_geometry)
+    ) %>%
+    sf::st_set_geometry("geometry") %>%
+    mutate(nome_bairr = infodengesubmunicipal::normalizar_bairro(.data$nome_bairr))
+}
+```
+
+```{r carregar_dados, include=FALSE}
+cfg <- list(
+  municipio_nome = params$municipio_nome,
+  uf = params$uf,
+  municipio_geocodigo = params$municipio_geocodigo,
+  ano = params$ano,
+  populacao = params$populacao
+)
+
+df_mun <- preparar_notificacoes(
+  path = params$notificacoes_path,
+  municipio_geocodigo = cfg$municipio_geocodigo
+)
+
+dados_api <- preparar_historico_alerta(
+  path_unico = params$historico_alerta_path,
+  path_dengue = params$historico_alerta_dengue_path,
+  path_chikungunya = params$historico_alerta_chikungunya_path
+)
+
+ref_submunicipal <- preparar_referencia(
+  path = params$referencia_path,
+  col_bairro = params$col_bairro_ref,
+  col_bairro_id = params$col_bairro_id_ref,
+  col_distrito = params$col_distrito_ref,
+  col_pop = params$col_pop_ref,
+  col_geometry = params$col_geometry_ref
+)
+
+ref_bairros <- ref_submunicipal %>%
+  sf::st_drop_geometry() %>%
+  select(nome_bairr, id_bairro)
+
+pop_bairros <- ref_submunicipal %>%
+  sf::st_drop_geometry() %>%
+  select(nome_bairr, id_bairro, pop)
+
+shape_distritos <- ref_submunicipal %>%
+  group_by(.data$distrito) %>%
+  summarise(geometry = sf::st_union(.data$geometry), .groups = "drop") %>%
+  sf::st_as_sf()
+
+weeks_2_plot <- tail(sort(unique(as.numeric(df_mun$sem_not))), 3)
+week_atual <- as.numeric(substr(weeks_2_plot[length(weeks_2_plot)], 5, 6))
+ano_atual <- as.numeric(substr(weeks_2_plot[length(weeks_2_plot)], 1, 4))
+ultimas_3_semanas <- paste0("SE", sprintf("%02d", as.numeric(substr(weeks_2_plot, 5, 6))))
+breaks_1ano <- infodengesubmunicipal::criar_breaks_1ano(
+  ano_fim = ano_atual,
+  semana_fim = week_atual
+)
+breaks_anual <- sprintf("%02d", seq(1, 52))
+```
+
+```{r processar_dados, include=FALSE}
+df_mun_filtrado <- df_mun %>%
+  mutate(nm_bairro_norm = infodengesubmunicipal::normalizar_bairro(.data$nm_bairro)) %>%
+  filter(!is.na(.data$nm_bairro_norm))
+
+df_mun_ok <- fuzzyjoin::stringdist_inner_join(
+  df_mun_filtrado,
+  ref_bairros %>% transmute(nm_bairro_ref = .data$nome_bairr),
+  by = c("nm_bairro_norm" = "nm_bairro_ref"),
+  method = "lv",
+  max_dist = 2
+) %>%
+  distinct(.data$nu_notific, .data$arbo, .data$sem_not, .keep_all = TRUE)
+
+df_bairros <- df_mun_ok %>%
+  count(.data$arbo, .data$nm_bairro_ref, .data$sem_not, name = "notificacoes") %>%
+  mutate(sem_not = as.numeric(.data$sem_not)) %>%
+  left_join(pop_bairros, by = c("nm_bairro_ref" = "nome_bairr")) %>%
+  left_join(ref_submunicipal %>% select(-pop), by = c("nm_bairro_ref" = "nome_bairr")) %>%
+  mutate(inc = .data$notificacoes / .data$pop * 1e5)
+
+df_distritos <- df_bairros %>%
+  sf::st_drop_geometry() %>%
+  group_by(.data$distrito, .data$sem_not, .data$arbo) %>%
+  summarise(
+    pop = sum(.data$pop, na.rm = TRUE),
+    notificacoes = sum(.data$notificacoes, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(inc = .data$notificacoes / .data$pop * 1e5)
+
+notificacoes_brutas <- df_mun %>%
+  mutate(sem_not = as.numeric(.data$sem_not)) %>%
+  group_by(.data$sem_not, .data$arbo) %>%
+  summarise(notificacoes = n_distinct(.data$nu_notific), .groups = "drop")
+
+notificacoes_alocadas <- df_mun_ok %>%
+  mutate(sem_not = as.numeric(.data$sem_not)) %>%
+  group_by(.data$sem_not, .data$arbo) %>%
+  summarise(notificacoes_alocadas = n_distinct(.data$nu_notific), .groups = "drop")
+
+perda_notificacao <- notificacoes_brutas %>%
+  left_join(notificacoes_alocadas, by = c("sem_not", "arbo")) %>%
+  mutate(
+    notificacoes_alocadas = replace_na(.data$notificacoes_alocadas, 0),
+    casos_perdidos = pmax(.data$notificacoes - .data$notificacoes_alocadas, 0),
+    pct_perdidos = if_else(.data$notificacoes == 0, 0, 100 * .data$casos_perdidos / .data$notificacoes)
+  )
+
+df_distritos_mapa <- df_distritos %>%
+  left_join(shape_distritos, by = "distrito") %>%
+  sf::st_as_sf()
+```
+
+```{r gerar_graficos, include=FALSE}
+rotulo_arbo <- function(x) {
+  dplyr::recode(x, dengue = "Dengue", chikon = "Chikungunya", zika = "Zika", .default = x)
+}
+
+plot_vazio <- function(titulo) {
+  ggplot() +
+    annotate("text", x = 0, y = 0, label = "Dados nao disponiveis para este agravo", size = 4) +
+    labs(title = titulo) +
+    theme_void()
+}
+
+dados_api <- dados_api %>%
+  mutate(
+    SE = as.numeric(.data$SE),
+    ano = as.numeric(substr(.data$SE, 1, 4)),
+    epiweek = substr(.data$SE, 5, 6),
+    arbo_label = rotulo_arbo(.data$arbo),
+    across(any_of(c("casos", "p_inc100k", "nivel", "Rt", "tempmin", "receptivo")), as.numeric)
+  )
+
+# Figura 1 - mapa da divisao local
+fig1 <- ggplot() +
+  geom_sf(data = ref_submunicipal, aes(fill = .data$distrito), color = "white", linewidth = 0.15) +
+  labs(fill = "Unidade") +
+  theme_void() +
+  theme(legend.position = "bottom")
+
+# Figura 2 - agrupamentos submunicipais
+fig2 <- ggplot() +
+  geom_sf(data = shape_distritos, fill = "#E7EEF6", color = "#00539C", linewidth = 0.45) +
+  geom_sf_text(data = shape_distritos, aes(label = .data$distrito), size = 2.8) +
+  theme_void()
+
+# Figura 3 - completude
+df_mun_miss <- df_mun %>%
+  group_by(.data$sem_not, .data$arbo) %>%
+  summarise(
+    total = n(),
+    perc_na_id = 100 * sum(is.na(.data$id_bairro) | .data$id_bairro == 0, na.rm = TRUE) / total,
+    perc_na_nome = 100 * sum(is.na(.data$nm_bairro) | .data$nm_bairro == "", na.rm = TRUE) / total,
+    .groups = "drop"
+  )
+
+fig3 <- df_mun_miss %>%
+  filter(as.numeric(.data$sem_not) >= as.numeric(paste0(ano_atual, "01"))) %>%
+  pivot_longer(c("perc_na_id", "perc_na_nome"), names_to = "variavel", values_to = "percentual_na") %>%
+  mutate(
+    completude = 100 - .data$percentual_na,
+    variavel = recode(.data$variavel, perc_na_id = "ID_BAIRRO", perc_na_nome = "NM_BAIRRO"),
+    arbo_label = rotulo_arbo(.data$arbo),
+    ew = substr(.data$sem_not, 5, 6)
+  ) %>%
+  ggplot(aes(x = factor(.data$ew), y = .data$completude, color = .data$variavel, group = .data$variavel)) +
+  geom_hline(yintercept = 70, linetype = "dashed", color = "black") +
+  geom_point(alpha = 0.7) +
+  geom_line(alpha = 0.6) +
+  facet_wrap(vars(.data$arbo_label), ncol = 1) +
+  scale_x_discrete(breaks = breaks_anual) +
+  ylim(0, 100) +
+  labs(x = "Semana epidemiologica", y = "% de completude", color = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.position = "top")
+
+# Figura 4 - perda de notificacao
+fig4 <- perda_notificacao %>%
+  mutate(arbo_label = rotulo_arbo(.data$arbo)) %>%
+  ggplot() +
+  geom_line(aes(x = factor(.data$sem_not), y = .data$casos_perdidos, color = "Perdidos", group = 1)) +
+  geom_line(aes(x = factor(.data$sem_not), y = .data$notificacoes, color = "Notificados", group = 1)) +
+  facet_wrap(vars(.data$arbo_label), ncol = 1, scales = "free_y") +
+  scale_color_manual(values = c("Notificados" = "steelblue", "Perdidos" = "red3")) +
+  scale_x_discrete(breaks = breaks_1ano) +
+  labs(x = "Semana epidemiologica", y = "Casos", color = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.position = "top")
+
+# Figura 5/6 - incidencia municipal
+fig6 <- dados_api %>%
+  filter(.data$SE >= min(breaks_1ano, na.rm = TRUE)) %>%
+  ggplot(aes(x = factor(.data$SE), y = .data$p_inc100k, group = 1)) +
+  geom_ribbon(aes(ymin = 0, ymax = .data$p_inc100k, fill = factor(.data$nivel)), alpha = 0.25) +
+  geom_line(color = "steelblue", linewidth = 0.9) +
+  facet_wrap(vars(.data$arbo_label), ncol = 1, scales = "free_y") +
+  scale_x_discrete(breaks = breaks_1ano) +
+  labs(x = "Semana epidemiologica", y = "Incidencia por 100 mil hab.", fill = "Nivel") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top")
+
+# Figura 7 - receptividade climatica
+fig_receptividade <- dados_api %>%
+  filter(.data$arbo == "dengue", .data$SE >= min(breaks_1ano, na.rm = TRUE)) %>%
+  ggplot(aes(x = factor(.data$SE))) +
+  geom_col(aes(y = 100 * pmin(replace_na(.data$receptivo, 0), 1)), fill = "#BFD7EA", alpha = 0.6) +
+  geom_line(aes(y = .data$tempmin, group = 1), color = "goldenrod3", linewidth = 0.9) +
+  scale_x_discrete(breaks = breaks_1ano) +
+  labs(x = "Semana epidemiologica", y = "Temperatura minima / receptividade") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Figura 8 - comparacao anual
+fig7 <- dados_api %>%
+  mutate(pass = case_when(.data$ano == ano_atual ~ "Ano atual", .data$ano == ano_atual - 1 ~ "Ano anterior", TRUE ~ "Historico")) %>%
+  ggplot(aes(x = factor(.data$epiweek), y = .data$p_inc100k, color = .data$pass, group = interaction(.data$arbo, .data$ano))) +
+  geom_line(alpha = 0.85) +
+  facet_wrap(vars(.data$arbo_label), ncol = 1, scales = "free_y") +
+  scale_x_discrete(breaks = breaks_anual) +
+  labs(x = "Semana epidemiologica", y = "Incidencia por 100 mil hab.", color = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "top")
+
+# Figura 9 - Rt municipal
+fig8 <- dados_api %>%
+  filter(.data$SE >= min(breaks_1ano, na.rm = TRUE)) %>%
+  ggplot(aes(x = factor(.data$SE), y = .data$Rt, group = 1)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red3") +
+  geom_line(color = "steelblue", linewidth = 0.9) +
+  facet_wrap(vars(.data$arbo_label), ncol = 1) +
+  scale_x_discrete(breaks = breaks_1ano) +
+  labs(x = "Semana epidemiologica", y = "Rt") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Figura 10 - incidencia submunicipal dengue
+fig9 <- df_distritos %>%
+  filter(.data$arbo == "dengue", .data$sem_not >= min(breaks_1ano, na.rm = TRUE)) %>%
+  ggplot(aes(x = factor(.data$sem_not), y = .data$inc, group = .data$distrito, color = .data$distrito)) +
+  geom_line(linewidth = 0.75) +
+  scale_x_discrete(breaks = breaks_1ano) +
+  labs(x = "Semana epidemiologica", y = "Incidencia por 100 mil hab.", color = "Unidade") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
+
+# Figura 11 - mapa dengue
+fig10 <- df_distritos_mapa %>%
+  filter(.data$arbo == "dengue", .data$sem_not %in% weeks_2_plot) %>%
+  ggplot() +
+  geom_sf(aes(fill = .data$inc), color = "white", linewidth = 0.15) +
+  facet_wrap(vars(.data$sem_not)) +
+  scale_fill_viridis_c(option = "C", na.value = "grey90") +
+  labs(fill = "Incidencia") +
+  theme_void()
+
+# Figura 12 - incidencia submunicipal chikungunya
+fig11_data <- df_distritos %>%
+  filter(.data$arbo == "chikon", .data$sem_not >= min(breaks_1ano, na.rm = TRUE))
+
+fig11 <- if (nrow(fig11_data) > 0) {
+  ggplot(fig11_data, aes(x = factor(.data$sem_not), y = .data$inc, group = .data$distrito, color = .data$distrito)) +
+    geom_line(linewidth = 0.75) +
+    scale_x_discrete(breaks = breaks_1ano) +
+    labs(x = "Semana epidemiologica", y = "Incidencia por 100 mil hab.", color = "Unidade") +
+    theme_minimal(base_size = 11) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
+} else {
+  plot_vazio("Incidencia submunicipal de chikungunya")
+}
+
+# Figura 13 - mapa chikungunya
+fig12_data <- df_distritos_mapa %>%
+  filter(.data$arbo == "chikon", .data$sem_not %in% weeks_2_plot)
+
+fig12 <- if (nrow(fig12_data) > 0) {
+  ggplot(fig12_data) +
+    geom_sf(aes(fill = .data$inc), color = "white", linewidth = 0.15) +
+    facet_wrap(vars(.data$sem_not)) +
+    scale_fill_viridis_c(option = "C", na.value = "grey90") +
+    labs(fill = "Incidencia") +
+    theme_void()
+} else {
+  plot_vazio("Mapa submunicipal de chikungunya")
+}
+
+calcular_rt_sub <- function(data) {
+  if (nrow(data) < 6 || sum(data$notificacoes, na.rm = TRUE) == 0) {
+    return(data %>% mutate(Rt = NA_real_))
+  }
+
+  entrada <- data %>%
+    arrange(.data$sem_not) %>%
+    transmute(sem_not = .data$sem_not, casos = .data$notificacoes) %>%
+    as.data.frame()
+
+  tryCatch(
+    AlertTools::Rt(entrada, count = "casos", gtdist = "normal", meangt = 3, sdgt = 1) %>%
+      select(.data$sem_not, .data$Rt) %>%
+      right_join(data, by = "sem_not"),
+    error = function(e) data %>% mutate(Rt = NA_real_)
+  )
+}
+
+rt_submunicipal <- df_distritos %>%
+  group_by(.data$arbo, .data$distrito) %>%
+  group_modify(~ calcular_rt_sub(.x)) %>%
+  ungroup() %>%
+  mutate(arbo_label = rotulo_arbo(.data$arbo))
+
+fig13 <- rt_submunicipal %>%
+  filter(.data$sem_not >= min(breaks_1ano, na.rm = TRUE)) %>%
+  ggplot(aes(x = factor(.data$sem_not), y = .data$Rt, color = .data$distrito, group = .data$distrito)) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red3") +
+  geom_line(linewidth = 0.75, na.rm = TRUE) +
+  facet_wrap(vars(.data$arbo_label), ncol = 1) +
+  scale_x_discrete(breaks = breaks_1ano) +
+  labs(x = "Semana epidemiologica", y = "Rt", color = "Unidade") +
+  theme_minimal(base_size = 11) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom")
+```
+
+```{r gerar_tabelas, include=FALSE}
+tab1 <- perda_notificacao %>%
+  filter(.data$sem_not %in% weeks_2_plot) %>%
+  mutate(
+    arbo = rotulo_arbo(.data$arbo),
+    pct_perdidos = round(.data$pct_perdidos, 2)
+  ) %>%
+  arrange(.data$arbo, desc(.data$sem_not)) %>%
+  gt::gt() %>%
+  gt::cols_label(
+    sem_not = "SE",
+    arbo = "Arbovirose",
+    notificacoes = "Casos notificados",
+    notificacoes_alocadas = "Casos alocados",
+    casos_perdidos = "Casos perdidos",
+    pct_perdidos = "% perdidos"
+  )
+
+tab2 <- dados_api %>%
+  filter(.data$SE %in% weeks_2_plot) %>%
+  transmute(
+    SE,
+    Arbovirose = .data$arbo_label,
+    Casos = .data$casos,
+    Incidencia = round(.data$p_inc100k, 2),
+    Rt = round(.data$Rt, 2),
+    Nivel = .data$nivel
+  ) %>%
+  arrange(.data$Arbovirose, desc(.data$SE)) %>%
+  gt::gt()
+
+tab3 <- df_distritos %>%
+  filter(.data$arbo == "dengue", .data$sem_not %in% weeks_2_plot) %>%
+  transmute(
+    SE = .data$sem_not,
+    Unidade = .data$distrito,
+    Casos = .data$notificacoes,
+    Incidencia = round(.data$inc, 2)
+  ) %>%
+  arrange(desc(.data$SE), .data$Unidade) %>%
+  gt::gt()
+
+tab4 <- df_distritos %>%
+  filter(.data$arbo == "chikon", .data$sem_not %in% weeks_2_plot) %>%
+  transmute(
+    SE = .data$sem_not,
+    Unidade = .data$distrito,
+    Casos = .data$notificacoes,
+    Incidencia = round(.data$inc, 2)
+  ) %>%
+  arrange(desc(.data$SE), .data$Unidade) %>%
+  gt::gt()
+```
+
+# Situacao das Arboviroses em `r cfg$municipio_nome` - `r cfg$uf`
+
+Este boletim foi gerado a partir de dados locais fornecidos pelo usuario. O
+arquivo nao consulta APIs internas; todos os insumos sao lidos dos caminhos
+declarados nos parametros do YAML.
+
+## Contextualizacao
+
+```{r fig1, fig.cap=paste0("Descricao da divisao territorial de ", cfg$municipio_nome, "."), fig.width=7, fig.height=5}
+fig1
+```
+
+```{r fig2, fig.cap=paste0("Agrupamentos submunicipais de ", cfg$municipio_nome, "."), fig.width=7, fig.height=5}
+fig2
+```
+
+## Qualidade Dos Dados
+
+```{r fig3, fig.cap=paste0("Completude dos dados notificados ate a SE", week_atual, "."), fig.width=7, fig.height=6}
+fig3
+```
+
+**Tabela 1:** Casos notificados, alocados e perdidos nas ultimas semanas epidemiologicas.
+
+```{r tabela1}
+tab1
+```
+
+```{r fig4, fig.cap=paste0("Numero de notificacoes e perdas ate a SE", week_atual, "."), fig.width=7, fig.height=6}
+fig4
+```
+
+## Situacao Municipal
+
+**Tabela 2:** Resumo municipal das ultimas semanas epidemiologicas.
+
+```{r tabela2}
+tab2
+```
+
+```{r fig6, fig.cap=paste0("Curva de incidencia municipal ate a SE", week_atual, "."), fig.width=7, fig.height=6}
+fig6
+```
+
+```{r fig7, fig.cap=paste0("Receptividade climatica municipal ate a SE", week_atual, "."), fig.width=7, fig.height=4}
+fig_receptividade
+```
+
+```{r fig8, fig.cap="Comparacao da incidencia do ano atual com anos anteriores.", fig.width=7, fig.height=6}
+fig7
+```
+
+```{r fig9, fig.cap=paste0("Numero reprodutivo municipal ate a SE", week_atual, "."), fig.width=7, fig.height=6}
+fig8
+```
+
+## Situacao Submunicipal
+
+**Tabela 3:** Dengue por unidade submunicipal nas ultimas semanas epidemiologicas.
+
+```{r tabela3}
+tab3
+```
+
+```{r fig10, fig.cap=paste0("Curva de incidencia de dengue por unidade submunicipal ate a SE", week_atual, "."), fig.width=9, fig.height=5}
+fig9
+```
+
+```{r fig11, fig.cap="Incidencia de dengue nas ultimas semanas epidemiologicas.", fig.width=9, fig.height=6}
+fig10
+```
+
+**Tabela 4:** Chikungunya por unidade submunicipal nas ultimas semanas epidemiologicas.
+
+```{r tabela4}
+tab4
+```
+
+```{r fig12, fig.cap=paste0("Curva de incidencia de chikungunya por unidade submunicipal ate a SE", week_atual, "."), fig.width=9, fig.height=5}
+fig11
+```
+
+```{r fig13, fig.cap="Incidencia de chikungunya nas ultimas semanas epidemiologicas.", fig.width=9, fig.height=6}
+fig12
+```
+
+```{r fig14, fig.cap=paste0("Numero reprodutivo por unidade submunicipal ate a SE", week_atual, "."), fig.width=9, fig.height=6}
+fig13
+```
