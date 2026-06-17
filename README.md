@@ -1,354 +1,352 @@
-# infodengeintramunicipal
+# infodengesubmunicipal
 
-`infodengeintramunicipal` reúne funções em R para preparar, classificar e
-visualizar dados epidemiológicos em escala intramunicipal no fluxo do
-InfoDengue. O pacote cobre tarefas como leitura de dados de notificação,
-normalização de bairros, completude de séries semanais, associação espacial
-entre bairros e distritos, cálculo de alerta epidemiológico, gráficos e mapas.
+Pacote em R para gerar boletins municipais de arboviroses em escala
+submunicipal, a partir de arquivos locais preparados pela equipe usuária.
 
-## O que mudou na API nova
+O objetivo principal é apoiar equipes de vigilância e secretarias estaduais ou
+municipais que precisam produzir PDFs localmente, sem depender de acesso a APIs
+internas do InfoDengue.
 
-A principal mudança é a criação de funções com sufixo `_novo`. Elas refatoram
-partes do fluxo antigo para reduzir dependência de objetos globais e deixar os
-parâmetros importantes explícitos na chamada da função.
+## O Que O Pacote Faz
 
-Na prática, isso significa:
+O pacote ajuda a:
 
-- `params` agora é passado como argumento em `calcular_alerta_novo()`,
-  `calcular_alerta_cidade()` e `classificar_alerta()`.
-- `breaks_1ano`, `weeks_2_plot`, `limiar_epidemico`, `df_mun` e `df_mun_ok`
-  deixam de ser buscados no ambiente global pelas funções novas de gráficos e
-  mapas.
-- O código novo fica mais fácil de testar, reproduzir e reutilizar em boletins
-  de municípios diferentes.
-- As funções antigas continuam disponíveis para compatibilidade com scripts já
-  existentes.
+- validar dados locais de notificações;
+- padronizar nomes de bairros ou unidades locais;
+- combinar notificações com uma referência espacial e populacional;
+- calcular perdas de geolocalização por bairro/unidade;
+- gerar um arquivo `.qmd` pronto para renderizar um boletim em PDF;
+- produzir tabelas, gráficos e mapas básicos para acompanhamento municipal.
 
-Use as funções `_novo` em novos pipelines. Mantenha as funções antigas apenas
-quando precisar reproduzir código legado sem alterar a estrutura original.
+A forma recomendada de uso é pela função:
+
+```r
+criar_qmd_boletim()
+```
+
+Essa função cria um arquivo Quarto (`.qmd`) configurado para um município. O
+usuário depois renderiza esse `.qmd` para gerar o PDF.
 
 ## Instalação
 
+Se você recebeu um arquivo `.tar.gz` do pacote, instale assim:
+
 ```r
-install.packages("remotes")
-remotes::install_github("baruquerodrigues/infodengeintramunicipal")
+install.packages(
+  "infodengesubmunicipal_0.0.0.9000.tar.gz",
+  repos = NULL,
+  type = "source"
+)
 ```
 
-Para instalar a partir de uma cópia local do pacote:
+Se estiver instalando a partir de uma pasta local do pacote:
 
 ```r
 install.packages("devtools")
-devtools::install(".")
+devtools::install("caminho/para/infodengesubmunicipal")
 ```
 
-Carregue o pacote com:
+Depois carregue:
 
 ```r
-library(infodengeintramunicipal)
+library(infodengesubmunicipal)
 ```
 
-## Fluxo recomendado com a API nova
+Também é necessário ter o Quarto instalado para transformar o `.qmd` em PDF.
+No RStudio recente, o Quarto geralmente já vem incluído.
 
-Um fluxo típico usa as funções novas nesta ordem:
+## Organização Recomendada Dos Arquivos
 
-1. Ler ou preparar os dados de notificação.
-2. Normalizar nomes de bairros.
-3. Completar a grade bairro x semana epidemiológica.
-4. Classificar bairros em distritos, quando houver malhas `sf`.
-5. Calcular Rt e nível de alerta.
-6. Gerar gráficos e mapas usando parâmetros explícitos.
+Crie uma pasta para cada município. Por exemplo:
+
+```text
+boletins/
+└── brasilia/
+    ├── notificacoes.parquet
+    ├── historico_alerta.csv
+    ├── referencia_submunicipal.rds
+    └── boletim_brasilia.qmd
+```
+
+O pacote não baixa dados automaticamente. Os arquivos devem ser preparados e
+salvos localmente pela equipe usuária.
+
+## Arquivo De Notificações
+
+O arquivo de notificações pode ser `.csv`, `.parquet`, `.rds`, `.rda` ou
+`.RData`.
+
+Ele deve conter, no mínimo, estas colunas:
+
+| Coluna | Descrição |
+| --- | --- |
+| `municipio_geocodigo` | Código IBGE do município |
+| `dt_notific` | Data da notificação |
+| `dt_sin_pri` | Data dos primeiros sintomas |
+| `dt_digita` | Data de digitação |
+| `se_notif` | Semana epidemiológica da notificação |
+| `ano_notif` | Ano epidemiológico da notificação |
+| `cid10_codigo` | CID-10 do agravo |
+| `id_bairro` | Identificador do bairro ou unidade local |
+| `nm_bairro` | Nome do bairro ou unidade local |
+| `nu_notific` | Número da notificação |
+
+Os CIDs usados pelo template são:
+
+| CID | Arbovirose |
+| --- | --- |
+| `A90` | dengue |
+| `A92.0` | chikungunya |
+| `A928` | zika |
+
+## Arquivo De Histórico De Alerta
+
+O histórico de alerta pode ser informado de duas formas.
+
+Opção 1: um único arquivo com dengue e chikungunya, contendo uma coluna `arbo`:
+
+```text
+historico_alerta.csv
+```
+
+Opção 2: dois arquivos separados:
+
+```text
+historico_alerta_dengue.csv
+historico_alerta_chikungunya.csv
+```
+
+O histórico deve conter, no mínimo:
+
+| Coluna | Descrição |
+| --- | --- |
+| `SE` | Semana epidemiológica no formato ano + semana, por exemplo `202620` |
+| `casos` | Casos observados |
+| `p_inc100k` | Incidência por 100 mil habitantes |
+| `nivel` | Nível de alerta |
+| `Rt` | Número reprodutivo |
+| `tempmin` | Temperatura mínima usada na receptividade |
+| `arbo` | Arbovirose, apenas se for arquivo único |
+
+Quando forem usados dois arquivos separados, o pacote adiciona `arbo`
+automaticamente.
+
+## Arquivo De Referência Submunicipal
+
+Esse arquivo informa a divisão territorial usada no boletim: bairros, regiões
+administrativas, distritos, regionais de saúde ou outra unidade local.
+
+Pode ser `.rds`, `.rda` ou `.RData`. O objeto deve ser uma tabela espacial
+`sf`, ou uma tabela com uma coluna de geometria compatível com `sf`.
+
+O template espera uma referência com estas informações:
+
+| Informação | Exemplo de coluna |
+| --- | --- |
+| Nome da unidade local | `nome_bairr`, `RA`, `bairro` |
+| Identificador da unidade local | `id_bairro`, `ID_DISTRITO` |
+| Agrupamento submunicipal | `distrito`, `RS`, `regional` |
+| População | `pop` |
+| Geometria | `geometry`, `geom` |
+
+Você informa os nomes reais das colunas ao chamar `criar_qmd_boletim()`.
+
+## Gerar Um QMD Para Um Município
+
+Exemplo para Brasília:
 
 ```r
-library(dplyr)
-library(infodengeintramunicipal)
+library(infodengesubmunicipal)
 
-semana_atual <- 202405
-ano_atual <- 2024
-week_atual <- 5
-
-breaks_1ano <- criar_breaks_1ano(
-  ano_fim = ano_atual,
-  semana_fim = week_atual
+criar_qmd_boletim(
+  municipio_nome = "Brasília",
+  uf = "DF",
+  municipio_geocodigo = 5300108,
+  ano = 2026,
+  populacao = 2817068,
+  output_qmd = "boletins/brasilia/boletim_brasilia.qmd",
+  notificacoes_path = "boletins/brasilia/notificacoes.parquet",
+  historico_alerta_path = "boletins/brasilia/historico_alerta.csv",
+  referencia_path = "boletins/brasilia/referencia_submunicipal.rds",
+  col_bairro_ref = "RA",
+  col_bairro_id_ref = "ID_DISTRITO",
+  col_distrito_ref = "RS",
+  col_pop_ref = "pop",
+  col_geometry_ref = "geom"
 )
 ```
 
-## Leitura de dados
+Esse comando cria o arquivo:
 
-`ler_dados_dengue_novo()` lê um arquivo DBF, filtra notificações do município
-informado em `ID_MUNICIP` e `ID_MN_RESI`, e retorna apenas as colunas
-selecionadas.
+```text
+boletins/brasilia/boletim_brasilia.qmd
+```
+
+O arquivo gerado já contém os caminhos dos dados e a configuração do município.
+
+## Renderizar O PDF
+
+No R:
 
 ```r
-dados <- ler_dados_dengue_novo(
-  caminho = "dados_dengue.dbf",
-  codigo_municipio = "420910",
-  colunas = c(
-    "NU_NOTIFIC", "NU_ANO", "SEM_NOT", "ID_BAIRRO",
-    "NM_BAIRRO", "ID_MN_RESI", "CLASSI_FIN", "DT_SIN_PRI"
-  )
+quarto::quarto_render("boletins/brasilia/boletim_brasilia.qmd")
+```
+
+Ou pelo terminal:
+
+```sh
+quarto render boletins/brasilia/boletim_brasilia.qmd
+```
+
+Também é possível pedir para a função criar e renderizar em seguida:
+
+```r
+criar_qmd_boletim(
+  municipio_nome = "Brasília",
+  uf = "DF",
+  municipio_geocodigo = 5300108,
+  ano = 2026,
+  populacao = 2817068,
+  output_qmd = "boletins/brasilia/boletim_brasilia.qmd",
+  notificacoes_path = "boletins/brasilia/notificacoes.parquet",
+  historico_alerta_path = "boletins/brasilia/historico_alerta.csv",
+  referencia_path = "boletins/brasilia/referencia_submunicipal.rds",
+  col_bairro_ref = "RA",
+  col_bairro_id_ref = "ID_DISTRITO",
+  col_distrito_ref = "RS",
+  col_pop_ref = "pop",
+  col_geometry_ref = "geom",
+  render = TRUE
 )
 ```
 
-Se `colunas` não for informado, a função usa um conjunto padrão de colunas de
-notificação.
+## Usando Histórico Em Dois Arquivos
 
-## Normalização e completude semanal
-
-`normalizar_bairro()` continua sendo usada para padronizar nomes de bairros.
-Depois da agregação semanal, use `completar_dados_bairros_novo()` para garantir
-que todas as combinações de bairro, semana e arbovirose existam na base.
+Se dengue e chikungunya estiverem separados:
 
 ```r
-bairros_unicos <- dados |>
-  mutate(nm_bairro_ref = normalizar_bairro(NM_BAIRRO)) |>
-  pull(nm_bairro_ref) |>
-  unique()
-
-df_bairros_agregado <- dados |>
-  mutate(nm_bairro_ref = normalizar_bairro(NM_BAIRRO)) |>
-  mutate(arbo = "dengue", sem_not = as.numeric(SEM_NOT)) |>
-  count(arbo, nm_bairro_ref, sem_not, name = "notificações")
-
-df_bairros <- df_bairros_agregado |>
-  completar_dados_bairros_novo(
-    bairros_unicos = bairros_unicos,
-    se_var = "sem_not",
-    nm_bairr_var = "nm_bairro_ref",
-    group_var = "arbo",
-    max_semana_epidemiologica = semana_atual,
-    count_var = "notificações"
-  )
-```
-
-A função nova verifica colunas obrigatórias, aceita `count_var` customizado e
-retorna uma base vazia sem erro quando a entrada não tem linhas.
-
-## Classificação espacial de bairros
-
-`classificar_bairros_distrito_novo()` associa bairros a distritos usando
-centróides e interseção espacial. Quando um bairro não intersecta diretamente
-um distrito, o distrito mais próximo é atribuído.
-
-As malhas devem ser objetos `sf`. A malha de distritos precisa conter a coluna
-`distrito`; a de bairros precisa conter `nome_bairr` e `id_bairro`.
-
-```r
-bairros_distritos <- classificar_bairros_distrito_novo(
-  sp_distritos = distritos_sf,
-  sp_bairros = bairros_sf
+criar_qmd_boletim(
+  municipio_nome = "Município Exemplo",
+  uf = "UF",
+  municipio_geocodigo = 1234567,
+  ano = 2026,
+  populacao = 100000,
+  output_qmd = "boletim_exemplo.qmd",
+  notificacoes_path = "dados/notificacoes.parquet",
+  historico_alerta_dengue_path = "dados/historico_dengue.csv",
+  historico_alerta_chikungunya_path = "dados/historico_chikungunya.csv",
+  referencia_path = "dados/referencia_submunicipal.rds"
 )
 ```
 
-O pacote também exporta blocos menores para uso avançado:
+## Atualizar Um QMD Existente
 
-- `garantir_crs()`
-- `calcular_centroides()`
-- `intersectar_distritos()`
-- `atribuir_distrito_proximo()`
-
-## Cálculo de alerta epidemiológico
-
-A API antiga de alerta dependia de um objeto global chamado `params`. Na API
-nova, `params` é sempre informado explicitamente.
-
-Os dados de entrada devem conter, no mínimo:
-
-- uma coluna de identificação da unidade, por exemplo `id_bairro` ou
-  `id_distrito_nome`;
-- `sem_not`, com a semana epidemiológica;
-- `casos`, com a contagem usada pelo `AlertTools::Rt()`.
+Por segurança, a função não sobrescreve um `.qmd` que já existe. Para substituir
+um arquivo existente:
 
 ```r
-params_modelo <- list(
-  codmodelo = "seu_modelo",
-  limiar1 = 10,
-  limiar2 = 20
-)
-
-alerta_bairro <- calcular_alerta_novo(
-  id = 101,
-  data = dados_alerta,
-  coluna_id = "id_bairro",
-  params = params_modelo,
-  gtdist = "normal",
-  meangt = 3,
-  sdgt = 1
+criar_qmd_boletim(
+  municipio_nome = "Brasília",
+  uf = "DF",
+  municipio_geocodigo = 5300108,
+  ano = 2026,
+  populacao = 2817068,
+  output_qmd = "boletins/brasilia/boletim_brasilia.qmd",
+  notificacoes_path = "boletins/brasilia/notificacoes.parquet",
+  historico_alerta_path = "boletins/brasilia/historico_alerta.csv",
+  referencia_path = "boletins/brasilia/referencia_submunicipal.rds",
+  overwrite = TRUE
 )
 ```
 
-Para calcular todas as unidades de uma vez:
+## Erros Comuns
+
+### "arquivo nao encontrado"
+
+Verifique se o caminho informado existe a partir da pasta onde o R está sendo
+executado.
+
+Use:
 
 ```r
-alerta_cidade <- calcular_alerta_cidade(
-  data = dados_alerta,
-  coluna_id = "id_bairro",
-  params = params_modelo
-)
+getwd()
+file.exists("caminho/do/arquivo.csv")
 ```
 
-Também é possível executar o pipeline em partes:
+### "nao contem as colunas obrigatorias"
+
+O arquivo foi encontrado, mas alguma coluna esperada está ausente ou com outro
+nome. Confira os nomes com:
 
 ```r
-dados_unidade <- filtrar_unidade(dados_alerta, coluna_id = "id_bairro", id = 101)
-dados_rt <- calcular_rt(dados_unidade)
-dados_alerta <- classificar_alerta(dados_rt, params = params_modelo)
+names(read.csv("arquivo.csv"))
 ```
 
-Para contar quantas semanas recentes ficaram em alerta alto (`nivel >= 3`):
+Para arquivos `.parquet`:
 
 ```r
-calcular_semanas_alerta_alto_novo(
-  data = dados_alerta,
-  semana_atual = semana_atual,
-  bairro = "CENTRO",
-  janela = 5
-)
+arrow::read_parquet("arquivo.parquet") |> names()
 ```
 
-## Gráficos
+### "Quarto nao encontrado"
 
-As funções novas de gráficos recebem explicitamente a semana limite e os breaks
-do eixo X. Isso substitui a antiga dependência de objetos globais como
-`breaks_1ano`.
+Instale o Quarto ou use uma versão recente do RStudio.
 
-### Rt
+Site do Quarto:
 
-`create_rt_plot_novo()` espera uma coluna de semana, por padrão `sem_not`, e uma
-coluna `Rt`. A função retorna uma lista com `combined_plot` e
-`individual_plots`.
-
-```r
-plots_rt <- create_rt_plot_novo(
-  api_data = dados_rt,
-  weeks_limit = semana_atual,
-  title_suffix = "Rt por bairro",
-  breaks_1ano = breaks_1ano,
-  facet_by = "nm_bairro_ref",
-  lwr = "Rt_lwr",
-  upr = "Rt_upr"
-)
-
-plots_rt$combined_plot
+```text
+https://quarto.org/
 ```
 
-`facet_by`, `lwr` e `upr` são opcionais.
+### Nomes De Bairro Não Casam Com A Referência
 
-### Receptividade climática
+O template normaliza nomes removendo acentos e padronizando caixa, mas grafias
+muito diferentes ainda podem impedir a alocação. Revise:
 
-`create_receptivity_plot_novo()` espera, por padrão, as colunas `SE` e
-`tempmin`. É possível trocar esses nomes com `se_col` e `temp_col`.
+- `nm_bairro` nas notificações;
+- a coluna de nome da unidade local na referência;
+- abreviações, espaços extras e nomes antigos.
 
-```r
-plot_receptividade <- create_receptivity_plot_novo(
-  api_data = dados_clima,
-  weeks_limit = semana_atual,
-  breaks_1ano = breaks_1ano,
-  limiar_temp = 18,
-  se_col = "SE",
-  temp_col = "tempmin"
-)
-```
+## O Que O QMD Gerado Produz
 
-### Incidência com nowcasting
+O QMD gerado espelha a estrutura visual do boletim consolidado usado como
+referência no projeto. Ele inclui:
 
-`create_incidence_plot_novo()` combina dados observados e nowcasting. Os dados
-observados devem conter `ano_epi`, `total_Y` e `nivel`. Os dados de nowcasting
-devem conter `ano_epi`, `Median`, `LI`, `LS` e `type`.
+- cabeçalho e rodapé do boletim;
+- contextualização territorial;
+- mapa da divisão local;
+- mapa dos agrupamentos submunicipais;
+- gráfico de completude dos dados;
+- tabela e gráfico de perdas de notificação;
+- tabela municipal de situação recente;
+- curva de incidência municipal;
+- gráfico de receptividade climática;
+- comparação da incidência com anos anteriores;
+- Rt municipal;
+- tabelas por unidade submunicipal;
+- curvas de incidência por unidade submunicipal;
+- mapas submunicipais para dengue e chikungunya;
+- Rt por unidade submunicipal;
+- descrição dos indicadores e anexo.
 
-```r
-plot_inc <- create_incidence_plot_novo(
-  nowcast_data = mun_nowcast,
-  observed_data = mun_observados,
-  weeks_limit = semana_atual,
-  breaks_1ano = breaks_1ano,
-  limiar_epidemico = 72,
-  title_suffix = "Curva de incidência de dengue",
-  include_zoom = TRUE,
-  convert_to_incidence = TRUE,
-  pop = 616317
-)
-```
+A equipe pode editar textos, títulos e seções do boletim gerado sem alterar o
+pacote.
 
-Quando `convert_to_incidence = TRUE`, o argumento `pop` é obrigatório.
+## Observação Sobre Privacidade E Acesso A Dados
 
-## Mapas semanais
+O pacote não exige token e não consulta API interna. Todos os dados usados no
+boletim são arquivos locais indicados pelo usuário. A responsabilidade por
+armazenamento, sigilo e compartilhamento dos dados segue as normas da secretaria
+ou instituição responsável.
 
-`generate_maps_novo()` gera uma lista de mapas, um para cada semana em
-`weeks_2_plot`. A função espera um objeto com geometria `sf`, a coluna
-`sem_not`, a coluna `arbo` e a variável mapeada, por padrão `p_inc100k`.
+## Suporte Operacional
 
-```r
-mapas <- generate_maps_novo(
-  data = dados_sf,
-  weeks_2_plot = c(202403, 202404, 202405),
-  arbo = "dengue",
-  value_col = "p_inc100k",
-  allocated_data = df_mun_ok,
-  total_data = df_mun
-)
-```
+Ao pedir ajuda sobre um erro, envie:
 
-`allocated_data` e `total_data` são opcionais. Quando informados, a função usa
-essas bases para calcular a porcentagem de casos não alocados exibida no
-subtítulo do mapa.
+- a mensagem completa do erro;
+- o trecho do `.qmd` onde o erro ocorreu;
+- os nomes das colunas dos arquivos de entrada;
+- a versão do R e do Quarto.
 
-Também é possível adicionar uma camada espacial auxiliar:
-
-```r
-mapas <- generate_maps_novo(
-  data = dados_sf,
-  weeks_2_plot = c(202403, 202404, 202405),
-  arbo = "dengue",
-  shape = distritos_sf,
-  area = "distrito"
-)
-```
-
-## Guia rápido de migração
-
-| Antes | Agora | Mudança principal |
-| --- | --- | --- |
-| `ler_dados_dengue()` | `ler_dados_dengue_novo()` | código do município e colunas são argumentos |
-| `completar_dados_bairros()` | `completar_dados_bairros_novo()` | coluna de contagem configurável e melhor tratamento de bases vazias |
-| `classificar_bairros_distrito()` | `classificar_bairros_distrito_novo()` | fluxo espacial dividido em helpers exportados |
-| `calcular_alerta()` | `calcular_alerta_novo()` | `params` deixa de ser global |
-| chamada manual por unidade | `calcular_alerta_cidade()` | itera sobre todas as unidades da coluna escolhida |
-| `calcular_semanas_alerta_alto()` | `calcular_semanas_alerta_alto_novo()` | considera semanas até `semana_atual` e ignora `NA` em `nivel` |
-| `create_rt_plot()` | `create_rt_plot_novo()` | `breaks_1ano` vira argumento |
-| `create_receptivity_plot()` | `create_receptivity_plot_novo()` | `weeks_limit`, `breaks_1ano` e nomes de colunas são explícitos |
-| `create_incidence_plot()` | `create_incidence_plot_novo()` | `weeks_limit`, `breaks_1ano` e `limiar_epidemico` são explícitos |
-| `generate_maps()` | `generate_maps_novo()` | `weeks_2_plot`, `allocated_data` e `total_data` são argumentos |
-
-## Funções novas exportadas
-
-- `ler_dados_dengue_novo()`
-- `completar_dados_bairros_novo()`
-- `classificar_bairros_distrito_novo()`
-- `garantir_crs()`
-- `calcular_centroides()`
-- `intersectar_distritos()`
-- `atribuir_distrito_proximo()`
-- `filtrar_unidade()`
-- `calcular_rt()`
-- `classificar_alerta()`
-- `calcular_alerta_novo()`
-- `calcular_alerta_cidade()`
-- `calcular_semanas_alerta_alto_novo()`
-- `create_rt_plot_novo()`
-- `create_receptivity_plot_novo()`
-- `create_incidence_plot_novo()`
-- `generate_maps_novo()`
-
-## Desenvolvimento
-
-Para atualizar documentação e rodar a suíte de testes:
-
-```r
-install.packages(c("devtools", "testthat", "roxygen2"))
-devtools::document()
-devtools::test()
-devtools::check()
-```
-
-O pacote ainda mantém a API legada para compatibilidade, mas o caminho
-recomendado para novos usuários é começar pelas funções `_novo`.
+Com isso, normalmente é possível identificar rapidamente se o problema está no
+caminho do arquivo, no contrato de colunas ou na referência espacial.
