@@ -55,6 +55,19 @@ library(infodengesubmunicipal)
 Também é necessário ter o Quarto instalado para transformar o `.qmd` em PDF.
 No RStudio recente, o Quarto geralmente já vem incluído.
 
+Se o comando `quarto --version` não funcionar no terminal, instale o Quarto
+pelo site oficial:
+
+```text
+https://quarto.org/docs/get-started/
+```
+
+Depois de instalar, feche e abra novamente o terminal ou o RStudio e confira:
+
+```sh
+quarto --version
+```
+
 ## Organização Recomendada Dos Arquivos
 
 Crie uma pasta para cada município. Por exemplo:
@@ -98,6 +111,54 @@ Os CIDs usados pelo template são:
 | `A90` | dengue |
 | `A92.0` | chikungunya |
 | `A928` | zika |
+
+### Baixar Dados Da API Pública Do InfoDengue
+
+A API pública do InfoDengue pode ser usada para baixar séries municipais
+agregadas, conforme a documentação:
+
+```text
+https://info.dengue.mat.br/services/api/doc
+```
+
+Exemplo em R para baixar dados semanais de dengue de um município:
+
+```r
+base_url <- "https://info.dengue.mat.br/api/alertcity"
+
+consulta <- list(
+  geocode = 5300108,
+  disease = "dengue",
+  format = "csv",
+  ew_start = 1,
+  ew_end = 53,
+  ey_start = 2026,
+  ey_end = 2026
+)
+
+url <- paste0(
+  base_url,
+  "?",
+  paste(names(consulta), consulta, sep = "=", collapse = "&")
+)
+
+dados_infodengue <- read.csv(url)
+write.csv(
+  dados_infodengue,
+  "boletins/brasilia/alertcity_dengue.csv",
+  row.names = FALSE
+)
+```
+
+Troque `geocode` pelo código IBGE do município, `disease` por `"dengue"`,
+`"chikungunya"` ou `"zika"`, e ajuste as semanas (`ew_start`, `ew_end`) e os
+anos epidemiológicos (`ey_start`, `ey_end`) conforme o período do boletim.
+
+Esse endpoint público retorna dados agregados por município. O arquivo de
+notificações usado pelo boletim submunicipal deve continuar contendo as
+colunas listadas acima, com identificação da unidade local (`id_bairro` e/ou
+`nm_bairro`). Se os dados baixados da API forem usados como parte do fluxo de
+preparação, transforme-os antes para o formato esperado pelo template.
 
 ## Arquivo De Histórico De Alerta
 
@@ -149,7 +210,16 @@ O template espera uma referência com estas informações:
 | População | `pop` |
 | Geometria | `geometry`, `geom` |
 
-Você informa os nomes reais das colunas ao chamar `criar_qmd_boletim()`.
+Você informa os nomes reais das colunas ao chamar `criar_qmd_boletim()`. Em
+especial, `col_bairro_ref` e `col_bairro_id_ref` indicam quais colunas da
+referência serão comparadas com as colunas de unidade local do arquivo de
+notificações.
+
+Na prática, o valor informado em `col_bairro_ref` é comparado com a coluna
+nominal das notificações (`nm_bairro`), e o valor informado em
+`col_bairro_id_ref` é comparado com a coluna de identificador das notificações
+(`id_bairro`). Por isso, essas colunas precisam representar a mesma unidade
+territorial nos dois arquivos, mesmo que tenham nomes diferentes em cada base.
 
 ## Gerar Um QMD Para Um Município
 
