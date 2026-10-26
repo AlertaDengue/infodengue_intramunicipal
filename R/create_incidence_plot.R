@@ -69,20 +69,20 @@ create_incidence_plot <- function(nowcast_data, observed_data, title_suffix = NU
     nowcast_data <- nowcast_data %>%
       mutate(across(c(Median, LI, LS), ~ .x / pop * 1e5))
 
-    y_label <- "Incidência (casos por 100.000 hab.)"
+    y_label <- "Incid\u00eancia (casos por 100.000 hab.)"
   } else {
-    y_label <- "Incidência (casos por 100.000 hab.)"
+    y_label <- "Incid\u00eancia (casos por 100.000 hab.)"
   }
 
   # Determinar o título baseado nos parâmetros fornecidos
   if (!is.null(title_suffix)) {
     plot_title <- title_suffix
   } else if (!is.null(distrito_nome) && !is.null(SE)) {
-    plot_title <- paste0("Curva de incidência - ", distrito_nome, " até SE", SE)
+    plot_title <- paste0("Curva de incid\u00eancia - ", distrito_nome, " at\u00e9 SE", SE)
   } else if (!is.null(distrito_nome)) {
-    plot_title <- paste0("Curva de incidência - ", distrito_nome)
+    plot_title <- paste0("Curva de incid\u00eancia - ", distrito_nome)
   } else {
-    plot_title <- "Curva de incidência"
+    plot_title <- "Curva de incid\u00eancia"
   }
 
   # Ensure we're comparing the same weeks
@@ -161,7 +161,7 @@ create_incidence_plot <- function(nowcast_data, observed_data, title_suffix = NU
       alpha = 0.2
     ) +
     geom_hline(yintercept = limiar_epidemico, col = "red", show.legend = F) +
-    geom_text(aes(x = 10, y = limiar_epidemico + 1, label = "Limiar Epidêmico")) +
+    geom_text(aes(x = 10, y = limiar_epidemico + 1, label = "Limiar Epid\u00eamico")) +
 
     # Escalas
     scale_color_manual(
@@ -182,7 +182,7 @@ create_incidence_plot <- function(nowcast_data, observed_data, title_suffix = NU
         "Nowcasting" = "Nowcasting (IC 95%)",
         "1" = "Baixo Risco",
         "2" = "Receptivo",
-        "3" = "Transmissão",
+        "3" = "Transmiss\u00e3o",
         "4" = "Alta atividade"
       ),
       breaks = c("1", "2", "3", "4", "Nowcasting")
@@ -197,8 +197,8 @@ create_incidence_plot <- function(nowcast_data, observed_data, title_suffix = NU
     #   limits= c(min_val,max_val)
     # ) +
     labs(
-      x = "Semanas Epidemiológicas",
-      y = "Incidência (casos por 100.000 hab.)",
+      x = "Semanas Epidemiol\u00f3gicas",
+      y = "Incid\u00eancia (casos por 100.000 hab.)",
       title = title_suffix
     )
 
@@ -247,12 +247,12 @@ create_incidence_plot <- function(nowcast_data, observed_data, title_suffix = NU
       values = c("Nowcasting" = "red3", "1" = "green", "2" = "yellow",
                  "3" = "orange", "4" = "red"),
       labels = c("Nowcasting" = "Nowcasting", "1" = "Baixo Risco",
-                 "2" = "Receptivo", "3" = "Transmissão", "4" = "Alta atividade"),
+                 "2" = "Receptivo", "3" = "Transmiss\u00e3o", "4" = "Alta atividade"),
       breaks = c("Nowcasting", "1", "2", "3", "4")
     ) +
     scale_fill_manual(values = c("Nowcasting" = "red3"), guide = "none") +
     theme_minimal() +
-    labs(x = NULL, y = NULL, title = "Últimas 5 semanas")+
+    labs(x = NULL, y = NULL, title = "\u00daltimas 5 semanas")+
     theme(
       legend.position = "none",
       axis.text.x = element_text(angle = 45, hjust = 1, size = 8),

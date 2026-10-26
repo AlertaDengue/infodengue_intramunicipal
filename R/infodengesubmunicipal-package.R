@@ -5,6 +5,9 @@
 #' a refatoracao das funcoes segue em andamento.
 #'
 #' @keywords internal
+#' @importFrom AlertTools setCriteria
+#' @importFrom stats setNames
+#' @importFrom utils tail
 #' @importFrom magrittr %>%
 #' @import cowplot
 #' @import dplyr
@@ -16,5 +19,5 @@
 #' @importFrom gtable gtable_filter
 #' @importFrom patchwork inset_element
 #' @importFrom purrr map map_dfr
-#' @importFrom rlang .data sym
+#' @importFrom rlang .data sym :=
 "_PACKAGE"

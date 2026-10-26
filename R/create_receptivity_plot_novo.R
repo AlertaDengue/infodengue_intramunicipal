@@ -47,16 +47,16 @@ create_receptivity_plot_novo <- function(api_data, weeks_limit, breaks_1ano,
     ) +
     ggplot2::scale_fill_manual(values = c("TRUE" = "steelblue", "FALSE" = "grey70"), guide = "none") +
     ggplot2::geom_hline(
-      ggplot2::aes(yintercept = limiar_temp, color = "Limiar Favorável (18°C)"),
+      ggplot2::aes(yintercept = limiar_temp, color = "Limiar Favor\u00e1vel (18\u00b0C)"),
       linewidth = 1,
       linetype = "dashed"
     ) +
     ggplot2::scale_color_manual(values = c("red")) +
     ggplot2::scale_x_discrete(breaks = breaks_1ano) +
-    ggplot2::scale_y_continuous(name = "Temperatura Mínima (°C)") +
+    ggplot2::scale_y_continuous(name = "Temperatura M\u00ednima (\u00b0C)") +
     ggplot2::labs(
-      x = "Semanas Epidemiológicas",
-      title = "Receptividade climática e Temperatura Mínima por Semana",
+      x = "Semanas Epidemiol\u00f3gicas",
+      title = "Receptividade clim\u00e1tica e Temperatura M\u00ednima por Semana",
       color = ""
     ) +
     ggplot2::theme_minimal() +

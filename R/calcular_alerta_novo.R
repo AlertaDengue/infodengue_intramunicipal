@@ -163,6 +163,7 @@ calcular_alerta_novo <- function(
 #' @param gtdist Distribuição do tempo de geração.
 #' @param meangt Média do tempo de geração.
 #' @param sdgt Desvio padrão do tempo de geração.
+#' @param criteria_fn Funcao que constroi os criterios; padrao AlertTools::setCriteria.
 #'
 #' @return Data frame contendo os níveis de alerta para todas as unidades
 #' geográficas.

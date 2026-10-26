@@ -26,6 +26,8 @@ calcular_alerta_cidade(
 \item{meangt}{Média do tempo de geração.}
 
 \item{sdgt}{Desvio padrão do tempo de geração.}
+
+\item{criteria_fn}{Funcao que constroi os criterios; padrao AlertTools::setCriteria.}
 }
 \value{
 Data frame contendo os níveis de alerta para todas as unidades

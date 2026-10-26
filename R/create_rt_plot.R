@@ -75,16 +75,16 @@ create_rt_plot <- function(api_data, weeks_limit, title_suffix, facet_by = NULL,
   required_cols <- c(sem_not, "Rt")
   missing_cols <- required_cols[!required_cols %in% names(api_data)]
   if (length(missing_cols) > 0) {
-    stop(paste("Colunas obrigatórias não encontradas nos dados:", paste(missing_cols, collapse = ", ")))
+    stop(paste("Colunas obrigat\u00f3rias n\u00e3o encontradas nos dados:", paste(missing_cols, collapse = ", ")))
   }
 
   # Check if optional columns exist when provided
   if (!is.null(lwr) && !lwr %in% names(api_data)) {
-    warning(paste("Coluna", lwr, "não encontrada nos dados. Ribbon será ignorado."))
+    warning(paste("Coluna", lwr, "n\u00e3o encontrada nos dados. Ribbon ser\u00e1 ignorado."))
     lwr <- NULL
   }
   if (!is.null(upr) && !upr %in% names(api_data)) {
-    warning(paste("Coluna", upr, "não encontrada nos dados. Ribbon será ignorado."))
+    warning(paste("Coluna", upr, "n\u00e3o encontrada nos dados. Ribbon ser\u00e1 ignorado."))
     upr <- NULL
   }
 
@@ -99,7 +99,7 @@ create_rt_plot <- function(api_data, weeks_limit, title_suffix, facet_by = NULL,
       geom_line(aes(x = factor(!!sym(sem_not)), y = Rt, group = 1), linetype = 1) +
       geom_hline(yintercept = 1, linetype = 2, col = "red") +
       scale_x_discrete(breaks = breaks_1ano) +
-      labs(x = "Semanas Epidemiológicas", y = "Rt", title = title_suffix) +
+      labs(x = "Semanas Epidemiol\u00f3gicas", y = "Rt", title = title_suffix) +
       theme_minimal(base_size = 12) +
       theme(legend.position = "top", axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -127,7 +127,7 @@ create_rt_plot <- function(api_data, weeks_limit, title_suffix, facet_by = NULL,
       geom_line(aes(x = factor(!!sym(sem_not)), y = Rt, group = 1), linetype = 1) +
       geom_hline(yintercept = 1, linetype = 2, col = "red") +
       scale_x_discrete(breaks = breaks_1ano) +
-      labs(x = "Semanas Epidemiológicas", y = "Rt", title = title_suffix) +
+      labs(x = "Semanas Epidemiol\u00f3gicas", y = "Rt", title = title_suffix) +
       theme_minimal(base_size = 15) +
       theme(legend.position = "top", axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -161,7 +161,7 @@ create_rt_plot <- function(api_data, weeks_limit, title_suffix, facet_by = NULL,
         geom_line(aes(x = factor(!!sym(sem_not)), y = Rt, group = 1), linetype = 1) +
         geom_hline(yintercept = 1, linetype = 2, col = "red") +
         scale_x_discrete(breaks = breaks_1ano) +
-        labs(x = "Semanas Epidemiológicas", y = "Rt",
+        labs(x = "Semanas Epidemiol\u00f3gicas", y = "Rt",
              title = paste(title_suffix, "", level)) +
         theme_minimal(base_size = 12) +
         theme(legend.position = "top", axis.text.x = element_text(angle = 45, hjust = 1))
