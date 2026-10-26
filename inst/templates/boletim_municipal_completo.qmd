@@ -288,9 +288,6 @@ if (anyDuplicated(df_mun[c("nu_notific", "arbo")])) {
 }
 if (anyNA(df_mun$dt_notific)) stop("Datas de notificacao invalidas.", call. = FALSE)
 # Os codigos epidemiologicos informados sao preservados, sem substituir silenciosamente pelas datas.
-se_data <- lubridate::epiyear(df_mun$dt_notific) * 100L + lubridate::epiweek(df_mun$dt_notific)
-n_divergencias_temporais <- sum(as.numeric(df_mun$sem_not) != se_data)
-if (n_divergencias_temporais) warning(n_divergencias_temporais, " notificacoes com data e codigo epidemiologico divergentes; codigos preservados.", call. = FALSE)
 dados_api <- dados_api %>% filter(SE <= cfg$ano * 100 + 53)
 se_referencia <- c(as.numeric(df_mun$sem_not[as.integer(df_mun$ano_notif) == cfg$ano]),
                    dados_api$SE[dados_api$SE %/% 100 == cfg$ano])
@@ -331,6 +328,9 @@ if (!length(arbos)) {
 }
 # Somente agravos presentes no recorte entram nas series do boletim.
 df_mun <- df_mun %>% filter(arbo %in% arbos, as.numeric(sem_not) <= semana_atual)
+se_data <- lubridate::epiyear(df_mun$dt_notific) * 100L + lubridate::epiweek(df_mun$dt_notific)
+n_divergencias_temporais <- sum(as.numeric(df_mun$sem_not) != se_data)
+if (n_divergencias_temporais) warning(n_divergencias_temporais, " notificacoes com data e codigo epidemiologico divergentes; codigos preservados.", call. = FALSE)
 
 ```
 
