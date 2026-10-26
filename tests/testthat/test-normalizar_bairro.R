@@ -53,3 +53,9 @@ test_that("normalizar_bairro normaliza bairros reais do df_mun", {
   expect_false(any(grepl("[^A-Z0-9 ]", bairros_norm)))
 
 })
+
+ test_that("normalizar_bairro preserva nomes UTF-8 no locale C", {
+  entrada <- c("Til\u00e1pia", "S\u00e3o Jo\u00e3o", NA_character_)
+  resultado <- withr::with_locale(c(LC_CTYPE = "C"), normalizar_bairro(entrada))
+  expect_equal(resultado, c("TILAPIA", "SAO JOAO", NA_character_))
+})

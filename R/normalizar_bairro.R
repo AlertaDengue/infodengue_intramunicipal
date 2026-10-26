@@ -30,8 +30,8 @@
 #' @export
 #' @importFrom stringr str_replace_all str_squish
 normalizar_bairro <- function(nome) {
-  nome %>%
-    iconv(to = "ASCII//TRANSLIT") %>%
+  enc2utf8(as.character(nome)) %>%
+    iconv(from = "UTF-8", to = "ASCII//TRANSLIT") %>%
     toupper() %>%
     stringr::str_replace_all("[^A-Z0-9 ]", "") %>%
     stringr::str_squish()
