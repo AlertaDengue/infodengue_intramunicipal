@@ -15,7 +15,7 @@ Nenhum merge ou publicação de versão foi feito automaticamente.
 | 07 | [#9](https://github.com/AlertaDengue/infodengue_intramunicipal/pull/9) | Gráficos explícitos e APIs antigas obsoletas |
 | 08 | [#10](https://github.com/AlertaDengue/infodengue_intramunicipal/pull/10) | Painel de mapas adaptável |
 | 09 | [#11](https://github.com/AlertaDengue/infodengue_intramunicipal/pull/11) | Novo boletim, agravos condicionais e integração |
-| 10 | Branch `codex/10-documentacao-publicacao` | README, migração, documentação e preparação da versão |
+| 10 | [#12](https://github.com/AlertaDengue/infodengue_intramunicipal/pull/12) | README, migração, documentação e preparação da versão |
 
 ## Verificações realizadas
 
