@@ -85,3 +85,13 @@ testthat::test_that("generate_maps_novo filtra pelo argumento arbo sem ambiguida
 
   testthat::expect_equal(nrow(build$data[[1]]), 1)
 })
+
+ test_that("mapas aceitam CRS local sem transformar coordenadas", {
+  base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+  x <- sf::st_read(file.path(base, "shape", "feira_livre_bairros.shp"), quiet = TRUE)
+  original <- sf::st_crs(x)
+  x$sem_not <- 202637; x$arbo <- "dengue"; x$inc <- 1
+  p <- generate_maps_novo(x, 202637, c(0, 2), value_col = "inc", arbo = "dengue")[[1]]
+  expect_no_error(ggplot2::ggplot_build(p))
+  expect_equal(sf::st_crs(x), original)
+})

@@ -23,6 +23,10 @@ generate_maps_novo <- function(data, weeks_2_plot, lim_range = NULL,
                                total_data = NULL) {
   weeks_2_plot <- as.numeric(as.character(weeks_2_plot))
   arbo_filter <- arbo
+  # CRS de engenharia local sem unidade nao oferece operacao GDAL, nem para si mesmo.
+  # Apenas a copia usada no desenho perde essa etiqueta; as coordenadas e a entrada sao preservadas.
+  crs <- sf::st_crs(data)
+  if (!is.na(crs) && grepl("^(ENGCRS|LOCAL_CS)", crs$wkt)) data <- sf::st_set_crs(data, NA)
 
   data <- data %>%
     dplyr::mutate(
@@ -114,6 +118,7 @@ generate_maps_novo <- function(data, weeks_2_plot, lim_range = NULL,
     }
 
     p +
+      ggplot2::coord_sf(datum = NA) +
       ggpubr::theme_pubclean(base_size = 10) +
       ggplot2::theme(
         axis.text = ggplot2::element_blank(),

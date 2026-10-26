@@ -65,6 +65,7 @@ calcular_rt <- function(data, gtdist = "normal", meangt = 3, sdgt = 1) {
 #' @param data Data frame contendo os dados epidemiológicos com Rt
 #' previamente calculado.
 #' @param params Lista de parâmetros utilizados no modelo de alerta.
+#' @param criteria_fn Funcao que constroi os criterios; padrao AlertTools::setCriteria.
 #'
 #' @return Data frame com duas novas colunas:
 #' \itemize{
@@ -78,7 +79,7 @@ calcular_rt <- function(data, gtdist = "normal", meangt = 3, sdgt = 1) {
 #' }
 #'
 #' @export
-classificar_alerta <- function(data, params, criteria_fn = setCriteria) {
+classificar_alerta <- function(data, params, criteria_fn = AlertTools::setCriteria) {
   criteria <- construir_criteria_alerta(
     params = params,
     criteria_fn = criteria_fn
@@ -117,6 +118,7 @@ classificar_alerta <- function(data, params, criteria_fn = setCriteria) {
 #' @param gtdist Distribuição do tempo de geração.
 #' @param meangt Média do tempo de geração.
 #' @param sdgt Desvio padrão do tempo de geração.
+#' @param criteria_fn Funcao que constroi os criterios; padrao AlertTools::setCriteria.
 #'
 #' @return Data frame com níveis de alerta para a unidade geográfica.
 #'
@@ -139,7 +141,7 @@ calcular_alerta_novo <- function(
     gtdist = "normal",
     meangt = 3,
     sdgt = 1,
-    criteria_fn = setCriteria
+    criteria_fn = AlertTools::setCriteria
 ) {
 
   data |>
@@ -182,7 +184,7 @@ calcular_alerta_cidade <- function(
     gtdist = "normal",
     meangt = 3,
     sdgt = 1,
-    criteria_fn = setCriteria
+    criteria_fn = AlertTools::setCriteria
 ) {
 
   data |>

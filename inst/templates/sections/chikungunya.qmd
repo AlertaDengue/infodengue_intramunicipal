@@ -1,0 +1,27 @@
+## Chikungunya
+
+
+```{r chikon_texto_tab, results="asis"}
+cat(paste0("A @tbl-chikon apresenta casos acumulados e notificados, incidência e nível de alerta por ", agr, ".
+
+"))
+```
+
+```{r tbl-chikon, eval=tem_chikon}
+#| tbl-cap: "Situação de chikungunya por agrupamento."
+tab5
+```
+
+```{r chikon_texto_fig, results="asis", eval=tem_chikon}
+cat(paste0("As @fig-incidencia-chikon e @fig-mapas-chikon mostram, respectivamente, a curva de incidência de chikungunya em cada ",
+           agr, " e a incidência nas três últimas semanas epidemiológicas.\n\n"))
+```
+
+```{r fig-incidencia-chikon, eval=tem_chikon, fig.cap=paste0("Curva de incidência de chikungunya por ", agr, " até a SE", week_atual, "."), fig.width=12, fig.height=4 * ceiling(n_agrupamentos / 2), out.width="100%"}
+plot_grid(plotlist = rf_inc_distritos_chikon, ncol = 2)
+```
+
+```{r fig-mapas-chikon, eval=tem_chikon, fig.cap=paste0("Incidência de chikungunya (casos por 100 mil habitantes) por ", agr, " nas três últimas semanas epidemiológicas."), fig.width=10, fig.height=9, out.width="100%"}
+rf_map_distritos_chikon
+```
+

@@ -11,7 +11,7 @@ calcular_alerta_cidade(
   gtdist = "normal",
   meangt = 3,
   sdgt = 1,
-  criteria_fn = setCriteria
+  criteria_fn = AlertTools::setCriteria
 )
 }
 \arguments{
