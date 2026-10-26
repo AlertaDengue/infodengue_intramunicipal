@@ -96,3 +96,12 @@ testthat::test_that("create_incidence_plot_novo aceita weeks_limit e ano_epi com
 
   testthat::expect_true(any(vapply(dados_geom, nrow, integer(1)) > 0))
 })
+
+ test_that("incidencia sem estimativas ou limiar nao cria linha ficticia", {
+  obs <- tibble::tibble(ano_epi = c(202635, 202636, 202637), total_Y = c(2, 0, 1), nivel = c(1, 1, 2))
+  vazio <- tibble::tibble(ano_epi = numeric(), Median = numeric(), LI = numeric(), LS = numeric(), type = character())
+  p <- create_incidence_plot_novo(vazio, obs, 202637, obs$ano_epi, NA_real_)
+  expect_s3_class(p, "ggplot")
+  expect_false(any(vapply(p$layers, function(layer) inherits(layer$geom, "GeomHline"), logical(1))))
+  expect_no_error(ggplot2::ggplot_build(p))
+})

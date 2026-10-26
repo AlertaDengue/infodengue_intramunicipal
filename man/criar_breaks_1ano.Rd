@@ -9,7 +9,7 @@ criar_breaks_1ano(ano_fim, semana_fim, passo = 10)
 \arguments{
 \item{ano_fim}{Inteiro. Ano da última semana da série.}
 
-\item{semana_fim}{Inteiro. Semana epidemiológica final (1–52).}
+\item{semana_fim}{Inteiro. Semana epidemiológica final (1–53, conforme o ano).}
 
 \item{passo}{Inteiro. Intervalo entre os breaks em semanas.
 Default é \code{10}.}
@@ -24,8 +24,8 @@ semanas epidemiológicas, considerando uma janela móvel de 1 ano
 pelo argumento \code{passo} e retornados no formato \code{YYYYWW}.
 }
 \details{
-A função converte o ano e a semana final em um índice absoluto de
-semanas, calcula os pontos de quebra dentro da janela de 52 semanas
+A função usa o calendario epidemiologico de domingo e seleciona
+semanas consecutivas dentro da janela de 52 semanas
 anteriores e depois reconverte para o formato \code{ano-semana}.
 }
 \examples{

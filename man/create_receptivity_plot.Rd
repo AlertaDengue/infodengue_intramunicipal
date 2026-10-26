@@ -51,3 +51,6 @@ create_receptivity_plot(
 }
 
 }
+\seealso{
+\code{\link[=create_receptivity_plot_novo]{create_receptivity_plot_novo()}}
+}

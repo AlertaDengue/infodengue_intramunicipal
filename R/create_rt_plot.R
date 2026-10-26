@@ -62,9 +62,11 @@
 #' )
 #' }
 #'
+#' @seealso [create_rt_plot_novo()]
 #' @export
 create_rt_plot <- function(api_data, weeks_limit, title_suffix, facet_by = NULL,
                            lwr = NULL, upr = NULL, sem_not = NULL) {
+  .Deprecated("create_rt_plot_novo", package = "infodengesubmunicipal")
 
   # Set default column names if not provided
   if (is.null(sem_not)) sem_not <- "sem_not"

@@ -81,3 +81,6 @@ create_incidence_plot(
 }
 
 }
+\seealso{
+\code{\link[=create_incidence_plot_novo]{create_incidence_plot_novo()}}
+}
