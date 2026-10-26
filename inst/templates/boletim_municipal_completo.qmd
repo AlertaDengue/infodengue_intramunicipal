@@ -1,5 +1,6 @@
 ---
 title: ""
+lang: pt
 format:
   pdf:
     fig-width: 4
@@ -14,47 +15,33 @@ format:
           \setlength{\headheight}{70pt}
           \addtolength{\topmargin}{-40pt}
           \input{cabecalho_municipio.tex}
-          \pagestyle{fancy}
-          \fancyhf{}
-          \fancyhead[L]{%
+          \newcommand{\logoboletim}[1]{\IfFileExists{#1}{\includegraphics[height=40pt]{#1}}{\rule{0pt}{40pt}}}
+          \newcommand{\cabecalhoboletim}{%
             \begin{minipage}{\textwidth}
-              \includegraphics[height=40pt]{logo1.png}%
+              \logoboletim{{{logo_esquerda_arquivo}}}%
               \hfill%
-              \includegraphics[height=40pt]{logo2.png}\\[-6pt]
+              \logoboletim{{{logo_direita_arquivo}}}\\[-6pt]
               \color{infodengue}\rule{\textwidth}{2pt}\\[2pt]
               \color{black}\small\textbf{Boletim Semanal - semana \theweek\ de \theyear}\\[1pt]
-            \end{minipage}
-          }
-          \renewcommand{\headrulewidth}{0pt}
-          \fancyfoot[L]{%
+            \end{minipage}}
+          \newcommand{\rodapeboletim}{%
             \begin{minipage}{\textwidth}
               \color{infodengue}\rule{\textwidth}{1pt}\\[2pt]
               \color{black}\small%
               \href{https://info.dengue.mat.br/}{InfoDengue}%
-              \hfill Boletim Municipal - {{municipio_nome}} \hfill SE \theweek\ de \theyear
-            \end{minipage}
-          }
+              \hfill Boletim Municipal - \themunicipio \hfill SE \theweek\ de \theyear
+            \end{minipage}}
+          \pagestyle{fancy}
+          \fancyhf{}
+          \fancyhead[L]{\cabecalhoboletim}
+          \fancyfoot[L]{\rodapeboletim}
+          \renewcommand{\headrulewidth}{0pt}
           \renewcommand{\footrulewidth}{0pt}
           \fancypagestyle{plain}{
             \fancyhf{}
-            \fancyhead[L]{%
-              \begin{minipage}{\textwidth}
-                \includegraphics[height=40pt]{logo1.png}%
-                \hfill%
-                \includegraphics[height=40pt]{logo2.png}\\[-6pt]
-                \color{infodengue}\rule{\textwidth}{2pt}\\[2pt]
-                \color{black}\small\textbf{Boletim Semanal - semana \theweek\ de \theyear}\\[1pt]
-              \end{minipage}
-            }
+            \fancyhead[L]{\cabecalhoboletim}
+            \fancyfoot[L]{\rodapeboletim}
             \renewcommand{\headrulewidth}{0pt}
-            \fancyfoot[L]{%
-              \begin{minipage}{\textwidth}
-                \color{infodengue}\rule{\textwidth}{1pt}\\[2pt]
-                \color{black}\small%
-                \href{https://info.dengue.mat.br/}{InfoDengue}%
-                \hfill Boletim Municipal - \themunicipio \hfill SE \theweek\ de \theyear
-              \end{minipage}
-            }
             \renewcommand{\footrulewidth}{0pt}
           }
     keep-tex: false
@@ -62,6 +49,7 @@ params:
   municipio_nome: "{{municipio_nome}}"
   uf: "{{uf}}"
   municipio_geocodigo: {{municipio_geocodigo}}
+  executar_nowcasting: {{executar_nowcasting}}
   ano: {{ano}}
   populacao: {{populacao}}
   notificacoes_path: "{{notificacoes_path}}"
@@ -74,6 +62,14 @@ params:
   col_distrito_ref: "{{col_distrito_ref}}"
   col_pop_ref: "{{col_pop_ref}}"
   col_geometry_ref: "{{col_geometry_ref}}"
+  nome_unidade_local: "{{nome_unidade_local}}"
+  nome_unidade_local_plural: "{{nome_unidade_local_plural}}"
+  nome_agregacao: "{{nome_agregacao}}"
+  nome_agregacao_plural: "{{nome_agregacao_plural}}"
+  limiar_preseason: {{limiar_preseason}}
+  limiar_epidemico: {{limiar_epidemico}}
+  limiar_posseason: {{limiar_posseason}}
+  limiar_completude: {{limiar_completude}}
 editor: visual
 ---
 
@@ -156,9 +152,9 @@ fig2 <- ggplot() +
 
 params_modelo <- data.frame(
   municipio_geocodigo = cfg$municipio_geocodigo,
-  limiar_preseason = 7.129343,
-  limiar_posseason = 9.385739,
-  limiar_epidemico = 72.46401,
+  limiar_preseason = params$limiar_preseason,
+  limiar_posseason = params$limiar_posseason,
+  limiar_epidemico = params$limiar_epidemico,
   varcli = "temp_min",
   clicrit = 18,
   cid10 = "A90",
@@ -241,7 +237,8 @@ writeLines(
   con = "cabecalho_municipio.tex",
   text = c(
     paste0("\\newcommand{\\theweek}{",      week_atual, "}"),
-    paste0("\\newcommand{\\theyear}{",      ano_atual,  "}")
+    paste0("\\newcommand{\\theyear}{",      ano_atual,  "}"),
+    paste0("\\newcommand{\\themunicipio}{", cfg$municipio_nome, "}")
   )
 )
 

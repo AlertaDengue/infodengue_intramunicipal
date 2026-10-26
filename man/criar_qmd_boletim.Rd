@@ -21,8 +21,19 @@ criar_qmd_boletim(
   col_distrito_ref = "distrito",
   col_pop_ref = "pop",
   col_geometry_ref = "geometry",
+  limiar_preseason,
+  limiar_epidemico,
+  limiar_posseason,
+  nome_unidade_local = "bairro",
+  nome_unidade_local_plural = "bairros",
+  nome_agregacao = "distrito",
+  nome_agregacao_plural = "distritos",
+  limiar_completude = 70,
+  logo_esquerda = NULL,
+  logo_direita = NULL,
   overwrite = FALSE,
-  render = FALSE
+  render = FALSE,
+  executar_nowcasting = FALSE
 )
 }
 \arguments{
@@ -62,10 +73,29 @@ chikungunya, quando \code{historico_alerta_path} nao for usado.}
 
 \item{col_geometry_ref}{Nome da coluna de geometria na referencia.}
 
+\item{limiar_preseason, limiar_epidemico, limiar_posseason}{Limiares de
+incidencia semanal (casos por 100 mil habitantes) do municipio, calculados
+pelo InfoDengue a partir da serie historica (MEM).}
+
+\item{nome_unidade_local, nome_unidade_local_plural}{Nome da unidade local
+usado nos textos (ex.: \code{"bairro"}, \code{"bairros"}).}
+
+\item{nome_agregacao, nome_agregacao_plural}{Nome do agrupamento usado nos
+textos (ex.: \code{"distrito"}, \code{"distritos"}; \code{"região administrativa"},
+\code{"regiões administrativas"}).}
+
+\item{limiar_completude}{Completude minima recomendada (\%) das variaveis de
+localizacao, mostrada no grafico de completude.}
+
+\item{logo_esquerda, logo_direita}{Caminhos opcionais para as imagens do
+cabecalho. Sao copiadas para a pasta do \code{.qmd} como \code{logo1.png} e
+\code{logo2.png}. Sem elas, o cabecalho e gerado sem logos.}
+
 \item{overwrite}{Se \code{TRUE}, sobrescreve \code{output_qmd} quando ele ja existe.}
 
-\item{render}{Se \code{TRUE}, renderiza o QMD apos cria-lo usando o pacote
-\code{quarto}, quando disponivel, ou o binario \code{quarto} no sistema.}
+\item{render}{Se \code{TRUE}, renderiza o QMD apos cria-lo.}
+
+\item{executar_nowcasting}{Se TRUE, solicita ajuste opcional de nowcasting.}
 }
 \value{
 Caminho normalizado do arquivo QMD criado, invisivelmente.
