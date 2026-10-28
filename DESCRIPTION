@@ -19,27 +19,38 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports: 
+    AlertTools,
+    assertthat,
     cowplot,
     dplyr,
+    epical,
     foreign,
-    ggplot2,
+    fuzzyjoin,
+    ggplot2 (>= 4.0.0),
     ggpubr,
     grid,
+    gt,
     gtable,
+    kableExtra,
+    lubridate,
     magrittr,
     patchwork,
     purrr,
+    readr,
     rlang,
     sf,
     stringr,
+    tibble,
     tidyr
 Suggests: 
-    fuzzyjoin,
+    arrow,
     mockery,
+    nowcaster,
+    quarto,
     testthat (>= 3.0.0),
-    tibble,
     withr
 Config/testthat/edition: 3
 Depends: 
     R (>= 3.5)
+Remotes: AlertaDengue/AlertTools
 LazyData: true

@@ -420,3 +420,13 @@ Ao pedir ajuda sobre um erro, envie:
 
 Com isso, normalmente é possível identificar rapidamente se o problema está no
 caminho do arquivo, no contrato de colunas ou na referência espacial.
+
+## Dependências do boletim
+
+O fluxo exige ggplot2 4.0 ou superior. Instale o pacote com
+`remotes::install_github("AlertaDengue/infodengue_intramunicipal", dependencies = TRUE)`
+para resolver também as dependências opcionais e o remoto de AlertTools.
+`arrow` é necessário somente para Parquet; `nowcaster` é opcional no novo fluxo
+e exige seu próprio ambiente de modelagem (incluindo INLA). Os templates não
+instalam pacotes durante a renderização. O pacote R `quarto` não substitui
+o executável Quarto. Para PDF, recomendamos `quarto install tinytex`.

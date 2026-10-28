@@ -36,20 +36,15 @@ knitr::opts_chunk$set(
 ```
 
 ```{r pacotes, include=FALSE}
-pacman::p_load(
-  tidyverse,
-  sf,
-  lubridate,
-  ggpubr,
-  cowplot,
-  gt,
-  kableExtra,
-  arrow,
-  fuzzyjoin,
-  AlertTools
-)
+# Verifique dependencias antes de processar; nunca instale ao renderizar.
+pacotes <- c("dplyr", "tidyr", "stringr", "purrr", "tibble", "readr", "sf",
+             "lubridate", "ggplot2", "ggpubr", "cowplot", "gt", "kableExtra",
+             "fuzzyjoin", "AlertTools", "assertthat", "infodengesubmunicipal")
+faltam <- pacotes[!vapply(pacotes, requireNamespace, logical(1), quietly = TRUE)]
+if (length(faltam)) stop("Instale antes de renderizar: ", paste(faltam, collapse = ", "), call. = FALSE)
+invisible(lapply(pacotes, library, character.only = TRUE))
 
-pkgload::load_all("..", export_all = FALSE, quiet = TRUE)
+library(infodengesubmunicipal)
 ```
 
 ```{r funcoes, include=FALSE}
@@ -91,7 +86,10 @@ ler_tabela_local <- function(path, nome = "arquivo") {
   switch(
     ext,
     csv = readr::read_csv(path, show_col_types = FALSE),
-    parquet = arrow::read_parquet(path),
+    parquet = {
+      if (!requireNamespace("arrow", quietly = TRUE)) stop("Instale arrow para ler Parquet.", call. = FALSE)
+      arrow::read_parquet(path)
+    },
     rds = readRDS(path),
     rda = {
       env <- new.env(parent = emptyenv())
