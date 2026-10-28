@@ -8,7 +8,7 @@
 #'
 #' @return Objeto de criterio.
 #' @keywords internal
-construir_criteria_alerta <- function(params, criteria_fn = setCriteria) {
+construir_criteria_alerta <- function(params, criteria_fn = AlertTools::setCriteria) {
   crit_vector <- stats::setNames(
     as.character(params),
     names(params)

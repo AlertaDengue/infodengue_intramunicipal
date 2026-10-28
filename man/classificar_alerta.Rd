@@ -4,13 +4,15 @@
 \alias{classificar_alerta}
 \title{Classificar níveis de alerta epidemiológico}
 \usage{
-classificar_alerta(data, params, criteria_fn = setCriteria)
+classificar_alerta(data, params, criteria_fn = AlertTools::setCriteria)
 }
 \arguments{
 \item{data}{Data frame contendo os dados epidemiológicos com Rt
 previamente calculado.}
 
 \item{params}{Lista de parâmetros utilizados no modelo de alerta.}
+
+\item{criteria_fn}{Funcao que constroi os criterios; padrao AlertTools::setCriteria.}
 }
 \value{
 Data frame com duas novas colunas:

@@ -1,0 +1,22 @@
+## Dengue
+
+A @tbl-dengue apresenta, para cada `r agr` e para as três últimas semanas epidemiológicas (`r paste(ultimas_3_semanas, collapse = ", ")`), o número de casos acumulados e notificados, a incidência por 100 mil habitantes e o nível de alerta.
+
+
+```{r tbl-dengue}
+#| tbl-cap: "Situação de dengue por agrupamento."
+tab4
+```
+
+A @fig-incidencia-dengue mostra a curva de incidência de dengue em cada `r agr`; as cores indicam o nível de alerta de cada semana.
+
+```{r fig-incidencia-dengue, fig.cap=paste0("Curva de incidência de dengue por ", agr, " até a SE", week_atual, "."), fig.width=12, fig.height=4 * ceiling(n_agrupamentos / 2), out.width="100%"}
+plot_grid(plotlist = rf_inc_distritos_dengon, ncol = 2)
+```
+
+A @fig-mapas-dengue mostra a incidência de dengue por `r agr` nas semanas `r paste(ultimas_3_semanas, collapse = ", ")` de `r ano_atual`. Para cada semana é apresentado o percentual de notificações que não puderam ser alocadas em nenhum `r unid`, que deve ser considerado na interpretação dos mapas.
+
+```{r fig-mapas-dengue, fig.cap=paste0("Incidência de dengue (casos por 100 mil habitantes) por ", agr, " nas três últimas semanas epidemiológicas."), fig.width=10, fig.height=9, out.width="100%"}
+rf_map_distritos_dengon
+```
+

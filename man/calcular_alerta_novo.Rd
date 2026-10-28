@@ -12,7 +12,7 @@ calcular_alerta_novo(
   gtdist = "normal",
   meangt = 3,
   sdgt = 1,
-  criteria_fn = setCriteria
+  criteria_fn = AlertTools::setCriteria
 )
 }
 \arguments{
@@ -29,6 +29,8 @@ calcular_alerta_novo(
 \item{meangt}{Média do tempo de geração.}
 
 \item{sdgt}{Desvio padrão do tempo de geração.}
+
+\item{criteria_fn}{Funcao que constroi os criterios; padrao AlertTools::setCriteria.}
 }
 \value{
 Data frame com níveis de alerta para a unidade geográfica.

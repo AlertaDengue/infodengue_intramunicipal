@@ -4,7 +4,7 @@
 \alias{construir_criteria_alerta}
 \title{Construir criterios de alerta}
 \usage{
-construir_criteria_alerta(params, criteria_fn = setCriteria)
+construir_criteria_alerta(params, criteria_fn = AlertTools::setCriteria)
 }
 \arguments{
 \item{params}{Lista de parametros do modelo.}
