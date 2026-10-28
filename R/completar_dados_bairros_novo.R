@@ -35,53 +35,35 @@ completar_dados_bairros_novo <- function(dados_bairros, bairros_unicos, se_var,
     return(empty_result)
   }
 
-  dados_bairros <- dados_bairros %>%
-    dplyr::mutate(
-      ano = as.numeric(substr(as.character(.data[[se_var]]), 1, 4)),
-      semana = as.numeric(substr(as.character(.data[[se_var]]), 5, 6))
-    )
-
-  arbo_unicos <- unique(dados_bairros[[group_var]])
-  anos_unicos <- sort(unique(dados_bairros$ano))
-
-  if (!is.null(max_semana_epidemiologica)) {
-    ano_atual <- as.numeric(substr(as.character(max_semana_epidemiologica), 1, 4))
-    max_week_atual <- as.numeric(substr(as.character(max_semana_epidemiologica), 5, 6))
-  } else {
-    ano_atual <- max(anos_unicos)
-    max_week_atual <- max(dados_bairros$semana[dados_bairros$ano == ano_atual], na.rm = TRUE)
+  dados_bairros[[se_var]] <- validar_semanas_epi(dados_bairros[[se_var]])
+  if (is.null(max_semana_epidemiologica)) {
+    max_semana_epidemiologica <- max(dados_bairros[[se_var]])
   }
-
-  complete_data_list <- lapply(anos_unicos, function(year) {
-    max_week <- if (year == ano_atual) max_week_atual else 52
-
+  limite <- validar_semanas_epi(max_semana_epidemiologica)
+  if (length(limite) != 1L) stop("Informe apenas uma semana limite.", call. = FALSE)
+  ano_atual <- limite %/% 100L
+  max_week_atual <- limite %% 100L
+  dados_bairros$ano <- dados_bairros[[se_var]] %/% 100L
+  dados_bairros$semana <- dados_bairros[[se_var]] %% 100L
+  anos <- sort(unique(dados_bairros$ano[dados_bairros$ano <= ano_atual]))
+  grade <- lapply(anos, function(ano) {
+    max_week <- if (ano == ano_atual) max_week_atual else n_semanas_epi(ano)
     tidyr::expand_grid(
-      !!nm_bairr_var := bairros_unicos,
-      ano = year,
-      semana = seq_len(max_week),
-      !!group_var := arbo_unicos
-    ) %>%
-      dplyr::mutate(
-        !!se_var := as.numeric(paste0(.data$ano, sprintf("%02d", .data$semana)))
-      )
-  })
-
-  complete_data <- dplyr::bind_rows(complete_data_list)
-
-  resultado <- complete_data %>%
-    dplyr::left_join(
-      dados_bairros,
-      by = c(nm_bairr_var, se_var, group_var, "ano", "semana")
-    ) %>%
-    dplyr::mutate(
-      !!count_var := dplyr::coalesce(.data[[count_var]], 0)
-    ) %>%
-    dplyr::select(-"ano", -"semana") %>%
-    dplyr::arrange(
-      !!rlang::sym(group_var),
-      !!rlang::sym(nm_bairr_var),
-      !!rlang::sym(se_var)
+      !!nm_bairr_var := unique(bairros_unicos),
+      !!se_var := ano * 100L + seq_len(max_week),
+      !!group_var := unique(dados_bairros[[group_var]])
     )
-
-  resultado
+  })
+  if (!length(grade)) {
+    complete_data <- dados_bairros[FALSE, c(nm_bairr_var, se_var, group_var)]
+  } else complete_data <- dplyr::bind_rows(grade)
+  chaves <- c(nm_bairr_var, se_var, group_var)
+  excluidos <- dplyr::anti_join(dados_bairros, complete_data, by = chaves)
+  if (nrow(excluidos)) {
+    warning(nrow(excluidos), " linhas (", sum(excluidos[[count_var]], na.rm = TRUE),
+            " notificacoes) fora da grade: confira bairros e limite temporal.", call. = FALSE)
+  }
+  dplyr::left_join(complete_data, dplyr::select(dados_bairros, -"ano", -"semana"), by = chaves) %>%
+    dplyr::mutate(!!count_var := dplyr::coalesce(.data[[count_var]], 0)) %>%
+    dplyr::arrange(.data[[group_var]], .data[[nm_bairr_var]], .data[[se_var]])
 }
