@@ -430,3 +430,10 @@ para resolver também as dependências opcionais e o remoto de AlertTools.
 e exige seu próprio ambiente de modelagem (incluindo INLA). Os templates não
 instalam pacotes durante a renderização. O pacote R `quarto` não substitui
 o executável Quarto. Para PDF, recomendamos `quarto install tinytex`.
+
+O gerador agora exige os três limiares epidemiológicos do município; os logos
+são opcionais (`logo_esquerda = NULL`, `logo_direita = NULL`). A completude
+usa percentual de 0 a 100 (padrão 70). Os rótulos têm argumentos explícitos
+para singular e plural. Os caminhos de entrada são gravados como absolutos;
+`overwrite = TRUE` autoriza substituir o QMD e os logos copiados. O nowcasting
+é solicitado explicitamente com `executar_nowcasting = TRUE` (padrão FALSE).

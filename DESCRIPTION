@@ -31,10 +31,12 @@ Imports:
     grid,
     gt,
     gtable,
+    jsonlite,
     kableExtra,
     lubridate,
     magrittr,
     patchwork,
+    png,
     purrr,
     readr,
     rlang,
@@ -48,6 +50,7 @@ Suggests:
     nowcaster,
     quarto,
     testthat (>= 3.0.0),
+    yaml,
     withr
 Config/testthat/edition: 3
 Depends: 

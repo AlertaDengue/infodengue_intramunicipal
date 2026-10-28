@@ -1,70 +1,38 @@
-test_that("criar_qmd_boletim gera QMD parametrizado", {
-  output <- tempfile(fileext = ".qmd")
-
-  res <- criar_qmd_boletim(
-    municipio_nome = "Brasilia",
-    uf = "DF",
-    municipio_geocodigo = 5300108,
-    ano = 2026,
-    populacao = 2817068,
-    output_qmd = output,
-    notificacoes_path = "dados/notificacoes.parquet",
-    historico_alerta_path = "dados/historico_alerta.csv",
-    referencia_path = "dados/ref_submunicipal.rds"
-  )
-
-  expect_equal(res, normalizePath(output))
-  expect_true(file.exists(output))
-
-  qmd <- paste(readLines(output, warn = FALSE), collapse = "\n")
-
-  expect_match(qmd, "Boletim Municipal - Brasilia", fixed = TRUE)
-  expect_match(qmd, "municipio_geocodigo: 5300108", fixed = TRUE)
-  expect_match(qmd, "ano: 2026", fixed = TRUE)
-  expect_match(qmd, 'notificacoes_path: "dados/notificacoes.parquet"', fixed = TRUE)
-  expect_match(qmd, 'historico_alerta_path: "dados/historico_alerta.csv"', fixed = TRUE)
-  expect_match(qmd, 'referencia_path: "dados/ref_submunicipal.rds"', fixed = TRUE)
-  expect_match(qmd, "```{r nowcasting, include=FALSE, cache=FALSE}", fixed = TRUE)
-  expect_match(qmd, "```{r bairros_ultima_semana, include=FALSE}", fixed = TRUE)
-  expect_match(qmd, "```{r fig13", fixed = TRUE)
-  expect_match(qmd, "tabela_indicadores", fixed = TRUE)
-  expect_false(grepl("{{municipio_nome}}", qmd, fixed = TRUE))
+argumentos_boletim <- function() {
+  base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+  list(municipio_nome = 'Feira "Livre"', uf = "XX", municipio_geocodigo = 999999,
+       ano = 2026, populacao = 250000, output_qmd = tempfile(fileext = ".qmd"),
+       notificacoes_path = file.path(base, "notificacoes.csv"),
+       historico_alerta_path = file.path(base, "historico_alerta.csv"),
+       referencia_path = file.path(base, "historico_alerta.csv"),
+       limiar_preseason = 5, limiar_epidemico = 50, limiar_posseason = 10)
+}
+test_that("gerador valida parametros e entrega caminhos absolutos sem marcadores", {
+  a <- argumentos_boletim()
+  res <- do.call(criar_qmd_boletim, a)
+  qmd <- paste(readLines(res), collapse = "\n")
+  yaml <- yaml::yaml.load(strsplit(qmd, "---", fixed = TRUE)[[1]][2])
+  expect_equal(yaml$params$municipio_nome, a$municipio_nome)
+  expect_equal(yaml$params$notificacoes_path, normalizePath(a$notificacoes_path))
+  expect_false(grepl("{{", qmd, fixed = TRUE))
+  expect_error(do.call(criar_qmd_boletim, a), "ja existe")
+  a$overwrite <- TRUE; a$limiar_completude <- 101
+  expect_error(do.call(criar_qmd_boletim, a), "Limiares invalidos")
+  a$limiar_completude <- 70; a$populacao <- Inf
+  expect_error(do.call(criar_qmd_boletim, a), "finito")
 })
-
-test_that("criar_qmd_boletim exige historico unico ou historicos por agravo", {
-  output <- tempfile(fileext = ".qmd")
-
-  expect_error(
-    criar_qmd_boletim(
-      municipio_nome = "Brasilia",
-      uf = "DF",
-      municipio_geocodigo = 5300108,
-      ano = 2026,
-      populacao = 2817068,
-      output_qmd = output,
-      notificacoes_path = "dados/notificacoes.parquet",
-      referencia_path = "dados/ref_submunicipal.rds"
-    ),
-    "Informe historico_alerta_path"
-  )
-})
-
-test_that("criar_qmd_boletim nao sobrescreve sem overwrite", {
-  output <- tempfile(fileext = ".qmd")
-  writeLines("existente", output)
-
-  expect_error(
-    criar_qmd_boletim(
-      municipio_nome = "Brasilia",
-      uf = "DF",
-      municipio_geocodigo = 5300108,
-      ano = 2026,
-      populacao = 2817068,
-      output_qmd = output,
-      notificacoes_path = "dados/notificacoes.parquet",
-      historico_alerta_path = "dados/historico_alerta.csv",
-      referencia_path = "dados/ref_submunicipal.rds"
-    ),
-    "output_qmd ja existe"
-  )
+test_that("logos sao opcionais, copiados e protegidos contra sobrescrita", {
+  a <- argumentos_boletim(); pasta <- tempfile(); dir.create(pasta)
+  a$output_qmd <- file.path(pasta, "boletim.qmd")
+  logo <- tempfile(fileext = ".png"); png::writePNG(array(1, c(2, 2, 3)), logo)
+  a$logo_esquerda <- logo; do.call(criar_qmd_boletim, a)
+  expect_true(file.exists(file.path(pasta, "logo1.png")))
+  a$output_qmd <- file.path(pasta, "outro.qmd")
+  expect_error(do.call(criar_qmd_boletim, a), "Logo de destino ja existe")
+  expect_false(file.exists(a$output_qmd))
+  a$logo_esquerda <- NULL; do.call(criar_qmd_boletim, a)
+  expect_false(any(grepl("logoboletim.*logo1.png", readLines(a$output_qmd))))
+  a$output_qmd <- file.path(pasta, "invalido.qmd"); writeLines("nao png", logo); a$logo_direita <- logo
+  expect_error(do.call(criar_qmd_boletim, a), "PNG valido")
+  expect_false(file.exists(a$output_qmd))
 })
