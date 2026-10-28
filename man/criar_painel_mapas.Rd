@@ -6,13 +6,16 @@
 \usage{
 criar_painel_mapas(
   lista_graficos,
-  titulo_legenda = "Incidencia (100.000 pessoas)"
+  titulo_legenda = "Incidencia (100.000 pessoas)",
+  numero_colunas = NULL
 )
 }
 \arguments{
 \item{lista_graficos}{Lista de objetos \code{ggplot}.}
 
 \item{titulo_legenda}{Titulo da legenda de cores do mapa.}
+
+\item{numero_colunas}{Numero opcional de colunas.}
 }
 \value{
 Objeto \code{ggplot} combinado.

@@ -2,54 +2,27 @@
 % Please edit documentation in R/create_map_panel.R
 \name{create_map_panel}
 \alias{create_map_panel}
-\title{Criar painel de mapas semanais com legenda compartilhada}
+\title{Criar painel adaptavel de mapas com legenda compartilhada}
 \usage{
-create_map_panel(plots_list, legend_title = "Incidência (100.000 pessoas)")
-}
-\arguments{
-\item{plots_list}{Lista de objetos \code{ggplot}, normalmente gerada pela
-função \code{generate_maps()}. Espera-se que os três últimos elementos da
-lista correspondam aos mapas que serão exibidos no painel.}
-
-\item{legend_title}{String com o título da legenda de cores do mapa.
-Default é \code{"Incidência (100.000 pessoas)"}.}
-}
-\value{
-Um objeto \code{ggplot} combinado contendo três mapas organizados em painel
-e uma legenda compartilhada posicionada abaixo.
-}
-\description{
-Organiza uma lista de mapas (\code{ggplot}) em um painel visual contendo
-três mapas e uma legenda compartilhada. A função extrai automaticamente
-a legenda de um dos mapas e a posiciona abaixo do painel, removendo
-as legendas individuais dos mapas exibidos.
-}
-\details{
-Esse formato é útil para apresentar a evolução espacial de indicadores
-epidemiológicos (ex.: incidência) em diferentes semanas
-epidemiológicas em um único painel.
-
-A função:
-\itemize{
-\item Extrai a legenda de um dos mapas usando \code{ggplotGrob()}
-\item Remove as legendas individuais dos mapas exibidos
-\item Organiza os mapas utilizando \code{cowplot::ggdraw()} e \code{cowplot::draw_plot()}
-\item Posiciona a legenda compartilhada abaixo do painel
-}
-
-O layout final apresenta dois mapas na parte superior e um mapa
-centralizado na parte inferior.
-}
-\examples{
-\dontrun{
 create_map_panel(
-  generate_maps(
-    data = df_distritos,
-    value_col = "inc",
-    arbo = "dengue",
-    weeks_2_plot = c(202440, 202441, 202442)
-  )
+  plots_list,
+  legend_title = "Incidência (100.000 pessoas)",
+  ncol = NULL
 )
 }
+\arguments{
+\item{plots_list}{Lista nao vazia de ggplots, exibidos na ordem recebida.}
 
+\item{legend_title}{Titulo da legenda de preenchimento.}
+
+\item{ncol}{Numero opcional de colunas; por padrao usa uma grade aproximadamente quadrada.}
+}
+\value{
+Um ggplot composto, com todos os mapas e legenda compartilhada.
+}
+\description{
+Criar painel adaptavel de mapas com legenda compartilhada
+}
+\details{
+Os mapas com preenchimento devem usar escalas e limites compativeis.
 }

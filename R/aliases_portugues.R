@@ -67,14 +67,17 @@ gerar_mapas_novo <- function(dados, semanas_para_plotar, intervalo_limites = NUL
 #'
 #' @param lista_graficos Lista de objetos `ggplot`.
 #' @param titulo_legenda Titulo da legenda de cores do mapa.
+#' @param numero_colunas Numero opcional de colunas.
 #'
 #' @return Objeto `ggplot` combinado.
 #' @export
 criar_painel_mapas <- function(lista_graficos,
-                               titulo_legenda = "Incidencia (100.000 pessoas)") {
+                               titulo_legenda = "Incidencia (100.000 pessoas)",
+                               numero_colunas = NULL) {
   create_map_panel(
     plots_list = lista_graficos,
-    legend_title = titulo_legenda
+    legend_title = titulo_legenda,
+    ncol = numero_colunas
   )
 }
 

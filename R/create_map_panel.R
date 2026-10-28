@@ -1,64 +1,35 @@
-#' Criar painel de mapas semanais com legenda compartilhada
-#'
-#' Organiza uma lista de mapas (`ggplot`) em um painel visual contendo
-#' três mapas e uma legenda compartilhada. A função extrai automaticamente
-#' a legenda de um dos mapas e a posiciona abaixo do painel, removendo
-#' as legendas individuais dos mapas exibidos.
-#'
-#' Esse formato é útil para apresentar a evolução espacial de indicadores
-#' epidemiológicos (ex.: incidência) em diferentes semanas
-#' epidemiológicas em um único painel.
-#'
-#' @param plots_list Lista de objetos `ggplot`, normalmente gerada pela
-#' função `generate_maps()`. Espera-se que os três últimos elementos da
-#' lista correspondam aos mapas que serão exibidos no painel.
-#' @param legend_title String com o título da legenda de cores do mapa.
-#' Default é `"Incidência (100.000 pessoas)"`.
-#'
-#' @return
-#' Um objeto `ggplot` combinado contendo três mapas organizados em painel
-#' e uma legenda compartilhada posicionada abaixo.
-#'
-#' @details
-#' A função:
-#'
-#' * Extrai a legenda de um dos mapas usando `ggplotGrob()`
-#' * Remove as legendas individuais dos mapas exibidos
-#' * Organiza os mapas utilizando `cowplot::ggdraw()` e `cowplot::draw_plot()`
-#' * Posiciona a legenda compartilhada abaixo do painel
-#'
-#' O layout final apresenta dois mapas na parte superior e um mapa
-#' centralizado na parte inferior.
-#'
-#' @examples
-#' \dontrun{
-#' create_map_panel(
-#'   generate_maps(
-#'     data = df_distritos,
-#'     value_col = "inc",
-#'     arbo = "dengue",
-#'     weeks_2_plot = c(202440, 202441, 202442)
-#'   )
-#' )
-#' }
-#'
+#' Criar painel adaptavel de mapas com legenda compartilhada
+#' @param plots_list Lista nao vazia de ggplots, exibidos na ordem recebida.
+#' @param legend_title Titulo da legenda de preenchimento.
+#' @param ncol Numero opcional de colunas; por padrao usa uma grade aproximadamente quadrada.
+#' @return Um ggplot composto, com todos os mapas e legenda compartilhada.
+#' @details Os mapas com preenchimento devem usar escalas e limites compativeis.
 #' @export
-create_map_panel <- function(plots_list, legend_title = "Incidência (100.000 pessoas)") {
-  # Extrair legenda
-  legend_plot <- plots_list[[length(plots_list) - 2]] +
-    theme(legend.position = "top") +
-    labs(fill = legend_title)
-
-  grob_legend <- ggplotGrob(legend_plot)
-  legend_grob <- gtable_filter(grob_legend, "guide-box")
-
-  # Criar painel
-  ggdraw() +
-    draw_plot(plots_list[[length(plots_list) - 2]] + theme(legend.position = "none"),
-              x = 0.08, y = 0.1, width = 0.27) +
-    draw_plot(plots_list[[length(plots_list) - 1]] + theme(legend.position = "none"),
-              x = 0.65, y = 0.1, width = 0.27) +
-    draw_plot(plots_list[[length(plots_list)]] + theme(legend.position = "none"),
-              x = 0.4, y = -0.3, width = 0.27) +
-    draw_grob(legend_grob, x = 0.3, y = 0.05,width = 0.4)
+create_map_panel <- function(plots_list, legend_title = "Incidência (100.000 pessoas)", ncol = NULL) {
+  if (!is.list(plots_list) || !length(plots_list) ||
+      !all(vapply(plots_list, inherits, logical(1), "ggplot"))) {
+    stop("plots_list deve conter ao menos um ggplot.", call. = FALSE)
+  }
+  if (is.null(ncol)) ncol <- ceiling(sqrt(length(plots_list)))
+  if (length(ncol) != 1L || !is.numeric(ncol) || !is.finite(ncol) || ncol < 1 || ncol != floor(ncol)) {
+    stop("ncol deve ser inteiro positivo.", call. = FALSE)
+  }
+  assinaturas <- lapply(plots_list, function(p) {
+    escala <- ggplot2::ggplot_build(p)$plot$scales$get_scales("fill")
+    if (is.null(escala)) return(NULL)
+    list(limites = escala$get_limits(), quebras = escala$get_breaks(),
+         cores = escala$map(escala$get_breaks()))
+  })
+  usadas <- assinaturas[!vapply(assinaturas, is.null, logical(1))]
+  if (length(usadas) > 1L && !all(vapply(usadas, identical, logical(1), usadas[[1]]))) {
+    stop("Mapas com escalas de preenchimento incompativeis: informe limites comuns.", call. = FALSE)
+  }
+  legendas <- lapply(plots_list, function(p) {
+    cowplot::get_legend(p + ggplot2::labs(fill = legend_title) + ggplot2::theme(legend.position = "bottom"))
+  })
+  legendas <- Filter(Negate(is.null), legendas)
+  mapas <- lapply(plots_list, function(p) p + ggplot2::theme(legend.position = "none"))
+  painel <- cowplot::plot_grid(plotlist = mapas, ncol = ncol, align = "hv")
+  if (!length(legendas)) return(painel)
+  cowplot::plot_grid(painel, legendas[[1]], ncol = 1, rel_heights = c(1, 0.15))
 }
