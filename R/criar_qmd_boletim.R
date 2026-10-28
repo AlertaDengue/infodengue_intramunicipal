@@ -177,23 +177,31 @@ substituir_placeholders <- function(template, valores) {
   template
 }
 
-renderizar_qmd <- function(path) {
-  if (requireNamespace("quarto", quietly = TRUE)) {
-    quarto::quarto_render(path)
-    return(invisible(path))
+encontrar_quarto <- function() {
+  bin <- Sys.which("quarto")
+  if (!nzchar(bin) && requireNamespace("quarto", quietly = TRUE)) {
+    bin <- tryCatch(quarto::quarto_path(), error = function(e) "")
   }
+  if (is.null(bin) || !length(bin)) return("")
+  unname(bin)
+}
 
-  quarto_bin <- Sys.which("quarto")
-
-  if (!nzchar(quarto_bin)) {
-    stop("Nao foi possivel renderizar: pacote/binario quarto nao encontrado.", call. = FALSE)
+renderizar_qmd <- function(path, quarto_bin = encontrar_quarto()) {
+  path <- normalizePath(path, mustWork = TRUE)
+  if (length(quarto_bin) != 1L || is.na(quarto_bin) || !nzchar(quarto_bin)) {
+    stop("Quarto nao encontrado. Instale em https://quarto.org/docs/get-started/", call. = FALSE)
   }
-
   status <- system2(quarto_bin, c("render", shQuote(path)))
-
-  if (!identical(status, 0L)) {
-    stop("quarto render falhou com status ", status, ".", call. = FALSE)
+  if (status != 0L) {
+    log <- sub("[.]qmd$", ".log", path, ignore.case = TRUE)
+    if (file.exists(log)) {
+      linhas <- readLines(log, warn = FALSE)
+      erros <- grep("^!", linhas)
+      indices <- unique(unlist(lapply(erros, function(i) seq.int(i, min(i + 3L, length(linhas))))))
+      if (length(indices)) message(paste(linhas[indices], collapse = "\n"))
+      stop("A renderizacao falhou (status ", status, "). Consulte ", log, call. = FALSE)
+    }
+    stop("A renderizacao falhou (status ", status, "). Veja a saida do Quarto acima; nenhum log LaTeX foi produzido.", call. = FALSE)
   }
-
   invisible(path)
 }
