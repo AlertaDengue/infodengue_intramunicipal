@@ -26,38 +26,15 @@ calcular_inicio_janela_1ano <- function(weeks_limit) {
 #' @return Data frame de nowcasting com colunas ajustadas.
 #' @keywords internal
 ajustar_nowcasting_legado <- function(nowcast_data, observed_data) {
-  common_weeks <- intersect(nowcast_data$ano_epi, observed_data$ano_epi)
-
-  nowcast_filtered <- nowcast_data %>%
-    dplyr::filter(.data$ano_epi %in% common_weeks)
-
-  observed_filtered <- observed_data %>%
-    dplyr::filter(.data$ano_epi %in% common_weeks)
-
-  for (i in seq_along(common_weeks)) {
-    if (nowcast_filtered$Median[i] < observed_filtered$total_Y[i]) {
-      nowcast_filtered$Median[i] <- observed_filtered$total_Y[i]
-    }
-
-    if (nowcast_filtered$LI[i] < observed_filtered$total_Y[i]) {
-      nowcast_filtered$LI[i] <- observed_filtered$total_Y[i] - 0.5
-    }
-
-    if (nowcast_filtered$LS[i] < observed_filtered$total_Y[i]) {
-      nowcast_filtered$LS[i] <- observed_filtered$total_Y[i] + 0.5
-    }
+  if (anyDuplicated(observed_data$ano_epi)) {
+    stop("Serie observada deve ter uma linha por semana.", call. = FALSE)
   }
-
-  nowcast_data %>%
-    dplyr::left_join(
-      nowcast_filtered %>% dplyr::select("ano_epi", "Median", "LI", "LS"),
-      by = "ano_epi",
-      suffix = c(".x", ".y")
-    ) %>%
-    dplyr::mutate(
-      Median = dplyr::coalesce(.data$Median.y, .data$Median.x),
-      LI = dplyr::coalesce(.data$LI.y, .data$LI.x),
-      LS = dplyr::coalesce(.data$LS.y, .data$LS.x)
-    ) %>%
-    dplyr::select(-dplyr::all_of(c("Median.x", "Median.y", "LI.x", "LI.y", "LS.x", "LS.y")))
+  observado <- observed_data$total_Y[match(nowcast_data$ano_epi, observed_data$ano_epi)]
+  limites <- c(Median = 0, LI = -0.5, LS = 0.5)
+  for (coluna in names(limites)) {
+    trocar <- !is.na(nowcast_data[[coluna]]) & !is.na(observado) &
+      nowcast_data[[coluna]] < observado
+    nowcast_data[[coluna]][trocar] <- observado[trocar] + limites[[coluna]]
+  }
+  nowcast_data
 }
