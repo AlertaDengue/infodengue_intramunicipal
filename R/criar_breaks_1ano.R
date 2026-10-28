@@ -5,12 +5,12 @@
 #' (52 semanas). Os breaks são calculados em intervalos definidos
 #' pelo argumento `passo` e retornados no formato `YYYYWW`.
 #'
-#' A função converte o ano e a semana final em um índice absoluto de
-#' semanas, calcula os pontos de quebra dentro da janela de 52 semanas
+#' A função usa o calendario epidemiologico de domingo e seleciona
+#' semanas consecutivas dentro da janela de 52 semanas
 #' anteriores e depois reconverte para o formato `ano-semana`.
 #'
 #' @param ano_fim Inteiro. Ano da última semana da série.
-#' @param semana_fim Inteiro. Semana epidemiológica final (1–52).
+#' @param semana_fim Inteiro. Semana epidemiológica final (1–53, conforme o ano).
 #' @param passo Inteiro. Intervalo entre os breaks em semanas.
 #' Default é `10`.
 #'
@@ -35,22 +35,8 @@
 #'
 #' @export
 criar_breaks_1ano <- function(ano_fim, semana_fim, passo = 10) {
-  abs_fim    <- ano_fim * 52 + semana_fim
-  abs_inicio <- abs_fim - 52
-
-  abs_breaks <- seq(abs_inicio, abs_fim, by = passo)
-
-  if (tail(abs_breaks, 1) != abs_fim) {
-    abs_breaks <- c(abs_breaks, abs_fim)
-  }
-
-  anos    <- abs_breaks %/% 52
-  semanas <- abs_breaks %% 52
-
-  mask <- semanas == 0
-  semanas[mask] <- 52
-  anos[mask]    <- anos[mask] - 1
-
-  breaks <- anos * 100 + semanas
-  return(breaks)
+  if (length(passo) != 1L || !is.numeric(passo) || !is.finite(passo) || passo < 1 || passo != floor(passo)) stop("passo deve ser inteiro positivo.", call. = FALSE)
+  semanas <- ultimas_semanas_epi(as.numeric(ano_fim) * 100 + as.numeric(semana_fim), 53L)
+  indices <- unique(c(seq.int(1L, length(semanas), by = passo), length(semanas)))
+  as.numeric(semanas[indices])
 }

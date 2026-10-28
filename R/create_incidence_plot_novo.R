@@ -83,13 +83,13 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
       ggplot2::aes(x = factor(.data$ano_epi), ymin = .data$LI, ymax = .data$LS, fill = "Nowcasting", group = .data$type),
       alpha = 0.2
     ) +
-    ggplot2::geom_hline(yintercept = limiar_epidemico, col = "red", show.legend = FALSE) +
-    ggplot2::geom_text(ggplot2::aes(x = 10, y = limiar_epidemico + 1, label = "Limiar Epidêmico")) +
-    ggplot2::scale_color_manual(
+    (if (length(limiar_epidemico) == 1L && is.finite(limiar_epidemico)) ggplot2::geom_hline(yintercept = limiar_epidemico, col = "red", show.legend = FALSE)) +
+    (if (length(limiar_epidemico) == 1L && is.finite(limiar_epidemico)) ggplot2::geom_text(ggplot2::aes(x = 10, y = limiar_epidemico + 1, label = "Limiar Epidêmico"))) +
+    (if (nrow(nowcast_window)) ggplot2::scale_color_manual(
       name = NULL,
       values = c("Nowcasting" = "red3"),
       labels = c("Nowcasting" = "Nowcasting")
-    ) +
+    )) +
     ggplot2::scale_fill_manual(
       name = NULL,
       values = c("Nowcasting" = "red3", "1" = "green", "2" = "yellow", "3" = "orange", "4" = "red3"),
@@ -153,13 +153,13 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
       ggplot2::aes(x = factor(.data$ano_epi), ymin = .data$LI, ymax = .data$LS, fill = "Nowcasting", group = .data$type),
       alpha = 0.2
     ) +
-    ggplot2::geom_hline(yintercept = limiar_epidemico, col = "red", show.legend = FALSE) +
-    ggplot2::scale_color_manual(
+    (if (length(limiar_epidemico) == 1L && is.finite(limiar_epidemico)) ggplot2::geom_hline(yintercept = limiar_epidemico, col = "red", show.legend = FALSE)) +
+    (if (nrow(nowcast_window)) ggplot2::scale_color_manual(
       name = NULL,
       values = c("Nowcasting" = "red3", "1" = "green", "2" = "yellow", "3" = "orange", "4" = "red"),
       labels = c("Nowcasting" = "Nowcasting", "1" = "Baixo Risco", "2" = "Receptivo", "3" = "Transmissão", "4" = "Alta atividade"),
       breaks = c("Nowcasting", "1", "2", "3", "4")
-    ) +
+    )) +
     ggplot2::scale_fill_manual(values = c("Nowcasting" = "red3"), guide = "none") +
     ggplot2::theme_minimal() +
     ggplot2::labs(x = NULL, y = NULL, title = "Últimas 5 semanas") +

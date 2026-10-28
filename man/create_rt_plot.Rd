@@ -88,3 +88,6 @@ create_rt_plot(
 }
 
 }
+\seealso{
+\code{\link[=create_rt_plot_novo]{create_rt_plot_novo()}}
+}

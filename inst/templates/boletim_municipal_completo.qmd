@@ -719,8 +719,9 @@ fig4 <- ggarrange(fig4A, fig4B, ncol = 1, labels = letters[1:2])
 
 
 # Gráfico de incidência municipal - Dengue
-rf_inc_mun_dengon <- create_incidence_plot( 
-  nowcast_data = rf_mun_nowscat$mun_nowcast, 
+rf_inc_mun_dengon <- create_incidence_plot_novo(
+    weeks_limit = ano_week, breaks_1ano = breaks_1ano, limiar_epidemico = limiar_epidemico,
+    nowcast_data = rf_mun_nowscat$mun_nowcast,
   observed_data = rf_mun_nowscat$mun_observados %>% filter(ano_epi <= ano_week), 
   title_suffix = paste0("Curva de incidência de dengue - {{municipio_nome}} até SE", week_atual),
   include_zoom = FALSE, 
@@ -766,8 +767,9 @@ if (any(dados_api$arbo == "chikon", na.rm = TRUE)) {
 }
 
 # Receptividade climática
-rf_receptividade_climatica <- create_receptivity_plot(
-  api_data = dados_api %>% 
+rf_receptividade_climatica <- create_receptivity_plot_novo(
+    breaks_1ano = breaks_1ano,
+    api_data = dados_api %>%
     mutate(ano = as.numeric(substr(SE, 1, 4))) %>% 
     filter(arbo == "dengue" & ano %in% c(ano_atual-1, ano_atual)),
   weeks_limit = weeks_2_plot[3]
@@ -841,8 +843,9 @@ if (any(dados_api$arbo == "chikon", na.rm = TRUE)) {
   filter(sem_not >= ano_week-100) 
 
 
-rt_mun_dengon <-create_rt_plot(
-  api_data = dados_rt_mun_dengue %>% 
+rt_mun_dengon <-create_rt_plot_novo(
+    breaks_1ano = breaks_1ano,
+    api_data = dados_rt_mun_dengue %>%
     rename(SE = sem_not),
   weeks_limit = weeks_2_plot[3], 
   title_suffix = paste0("Curva de Rt dengue - {{municipio_nome}} até ", week_atual),
@@ -858,8 +861,9 @@ if (any(dados_api$arbo == "chikon", na.rm = TRUE)) {
     AlertTools::Rt(count = "casos", gtdist = "normal", meangt = 3, sdgt = 2) %>% 
   filter(sem_not >= ano_week-100) 
   
- rt_mun_chikon <-  create_rt_plot(
-  api_data = dados_rt_mun_chikon %>% 
+ rt_mun_chikon <-  create_rt_plot_novo(
+    breaks_1ano = breaks_1ano,
+    api_data = dados_rt_mun_chikon %>%
     rename(SE = sem_not),
   weeks_limit = weeks_2_plot[3], 
   title_suffix = paste0("Curva de Rt chikungunya - {{municipio_nome}} até ", week_atual),
@@ -871,8 +875,9 @@ if (any(dados_api$arbo == "chikon", na.rm = TRUE)) {
 }
 
 # Rt por distrito - Dengue
-rt_distrito_nome_dengon <- create_rt_plot(
-  api_data = df_distritos %>% 
+rt_distrito_nome_dengon <- create_rt_plot_novo(
+    breaks_1ano = breaks_1ano,
+    api_data = df_distritos %>%
     filter(arbo == "dengue" & sem_not >= ano_week-100), 
   weeks_limit = weeks_2_plot[3], 
   facet_by = "distrito",
@@ -882,8 +887,9 @@ rt_distrito_nome_dengon <- create_rt_plot(
 
 # Rt por distrito - Chikungunya
 if (any(dados_api$arbo == "chikon", na.rm = TRUE)) {
-  rt_distrito_nome_chikon <- create_rt_plot(
-    api_data = df_distritos %>% 
+  rt_distrito_nome_chikon <- create_rt_plot_novo(
+    breaks_1ano = breaks_1ano,
+    api_data = df_distritos %>%
       filter(arbo == "chikon" & sem_not >= ano_week-100), 
     weeks_limit = weeks_2_plot[3], 
     facet_by = "distrito",
@@ -898,7 +904,8 @@ if (any(dados_api$arbo == "chikon", na.rm = TRUE)) {
 # Incidencia por distrito - Dengue
 rf_inc_distrito_nomes_dengon <- map(names(rf_distrito_nomes_nowcast), ~ {
   distrito_nome <- .x
-  create_incidence_plot(
+  create_incidence_plot_novo(
+    weeks_limit = ano_week, breaks_1ano = breaks_1ano, limiar_epidemico = limiar_epidemico,
     nowcast_data = rf_distrito_nomes_nowcast[[distrito_nome]]$nowcast$total,
     observed_data = rf_distrito_nomes_nowcast[[distrito_nome]]$observado %>% filter(ano_epi <= ano_week),
     distrito_nome = distrito, 

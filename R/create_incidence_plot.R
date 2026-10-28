@@ -53,11 +53,13 @@
 #' )
 #' }
 #'
+#' @seealso [create_incidence_plot_novo()]
 #' @export
 create_incidence_plot <- function(nowcast_data, observed_data, title_suffix = NULL,
                                   distrito_nome = NULL, SE = NULL,
                                   ylim_max = NULL, include_zoom = FALSE, pop = pop,
                                   convert_to_incidence = F) {
+  .Deprecated("create_incidence_plot_novo", package = "infodengesubmunicipal")
 
   # Transformar em incidência se solicitado
   if (convert_to_incidence) {
