@@ -4,6 +4,7 @@ A @tbl-dengue apresenta, para cada `r agr` e para as três últimas semanas epid
 
 
 ```{r tbl-dengue}
+#| tbl-pos: H
 #| tbl-cap: "Situação de dengue por agrupamento."
 tab4
 ```

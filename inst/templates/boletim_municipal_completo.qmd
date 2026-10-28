@@ -684,7 +684,7 @@ fig_rt_distritos <- if (tem_chikon && tem_dengue) {
 
 ```{r gerar_tabelas, include=FALSE}
 estilo_tabela <- function(tabela) {
-  kable_styling(tabela, latex_options = c("HOLD_position", "striped"),
+  kable_styling(tabela, latex_options = "striped",
                 font_size = 10, position = "center")
 }
 
@@ -735,7 +735,7 @@ tab_limiar <- data.frame(
 ) %>%
   kbl(col.names = c("Limiar", "Incidência (casos/100 mil hab.)"),
       booktabs = TRUE, align = "c", linesep = "") %>%
-  kable_styling(latex_options = "HOLD_position", font_size = 10, position = "center")
+  kable_styling(latex_options = "basic", font_size = 10, position = "center")
 
 # Tabelas 4 e 5 - situacao por agrupamento
 tabela_agrupamento <- function(agravo) {
@@ -773,7 +773,7 @@ tabela_indicadores <- tibble::tribble(
   "Nível", "Nível de atenção para a situação da dengue calculado pelo Infodengue. Veja o Quadro de comparação do nível do Infodengue com os níveis do Plano de Contingência Nacional da Dengue do Ministério da Saúde."
 ) %>%
   kbl(booktabs = TRUE, align = c("l", "l"), linesep = "", col.names = NULL) %>%
-  kable_styling(latex_options = "HOLD_position", font_size = 10, position = "center") %>%
+  kable_styling(latex_options = "basic", font_size = 10, position = "center") %>%
   column_spec(1, width = "4cm", bold = TRUE) %>%
   column_spec(2, width = "10cm")
 
@@ -802,7 +802,7 @@ tabela_anexo <- tibble::tribble(
   kbl(booktabs = TRUE,
       col.names = c("Cor", "Nível de Atenção", "Situação", "Nível de contingência", "Situação"),
       align = c("c", "l", "l", "l", "l"), linesep = "", longtable = TRUE) %>%
-  kable_styling(latex_options = c("HOLD_position", "repeat_header"), font_size = 7, position = "center") %>%
+  kable_styling(latex_options = "repeat_header", font_size = 7, position = "center") %>%
   column_spec(1, width = "2cm", bold = TRUE,
               background = c("#369E36", "#C4BC10", "orange", "orange", "red", "red")) %>%
   column_spec(2, width = "3.5cm") %>%
@@ -874,6 +874,7 @@ Em `r ano_atual`, `r fmt(perda_total$perd)` das `r fmt(perda_total$notif)` notif
 
 
 ```{r tbl-perdas}
+#| tbl-pos: H
 #| tbl-cap: "Casos notificados e perdas nas últimas três semanas epidemiológicas."
 tab1
 ```
@@ -894,6 +895,7 @@ A @tbl-municipio apresenta, para as três últimas semanas epidemiológicas (`r 
 
 
 ```{r tbl-municipio}
+#| tbl-pos: H
 #| tbl-cap: "Situação municipal nas últimas três semanas epidemiológicas."
 tab2
 ```
@@ -902,6 +904,7 @@ A @tbl-limiares apresenta os limiares de incidência informados para o municípi
 
 
 ```{r tbl-limiares}
+#| tbl-pos: H
 #| tbl-cap: "Limiares de incidência do município."
 tab_limiar
 ```
