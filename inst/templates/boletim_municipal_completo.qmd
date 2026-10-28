@@ -128,11 +128,11 @@ agrupar_linhas <- function(tabela, grupos) {
 # Cor do nivel de alerta nas tabelas
 cor_nivel <- function(nivel) {
   dplyr::recode(nivel, verde = "#369E36", amarelo = "#C4BC10", laranja = "orange",
-                vermelho = "red", .default = "black")
+                vermelho = "red", .default = "black", .missing = "black")
 }
 nome_nivel <- function(nivel) {
   dplyr::recode(as.character(nivel), `1` = "verde", `2` = "amarelo", `3` = "laranja",
-                `4` = "vermelho", .default = NA_character_)
+                `4` = "vermelho", .default = "Indisponível", .missing = "Indisponível")
 }
 
 fmt <- function(x, d = 0) format(round(x, d), big.mark = ".", decimal.mark = ",", nsmall = d)
@@ -144,6 +144,8 @@ lista_texto <- function(x) {
 # Nowcasting opcional: devolve NULL se o pacote nao estiver instalado ou o ajuste falhar
 estados_nowcasting <- list()
 nowcasting_opcional <- function(dados, K, Dmax, unidade = "municipio") {
+  # Datas de digitacao ausentes impedem o ajuste, mas nao retiram casos observados.
+  dados <- dados %>% filter(!is.na(dt_sin_pri), !is.na(dt_digita))
   estado <- if (!isTRUE(params$executar_nowcasting)) "desabilitado" else if (!tem_nowcaster) "indisponivel" else if (!nrow(dados)) "sem dados" else "solicitado"
   if (estado != "solicitado") {
     estados_nowcasting[[unidade]] <<- estado
@@ -356,9 +358,19 @@ df_mun_ok <- stringdist_inner_join(
   left_join(ref_bairros %>% select(nome_bairr, distrito), by = c("nm_bairro_ref" = "nome_bairr"))
 
 # Casos por unidade local e semana, com todas as unidades da referencia (inclusive sem casos)
-df_bairros <- df_mun_ok %>%
+contagens_bairros <- df_mun_ok %>%
   count(arbo, nm_bairro_ref, sem_not, name = "notificações") %>%
-  mutate(sem_not = as.numeric(sem_not)) %>%
+  mutate(sem_not = as.numeric(sem_not))
+# Sementes de contagem zero garantem ano/agravo na grade mesmo sem casos alocados.
+sementes_grade <- df_mun %>%
+  distinct(arbo, ano_notif) %>%
+  transmute(arbo, nm_bairro_ref = ref_bairros$nome_bairr[1],
+            sem_not = as.integer(ano_notif) * 100 + 1, notificações = 0)
+contagens_bairros <- bind_rows(
+  contagens_bairros,
+  anti_join(sementes_grade, contagens_bairros, by = c("arbo", "nm_bairro_ref", "sem_not"))
+)
+df_bairros <- contagens_bairros %>%
   completar_dados_bairros(
     bairros_unicos = ref_bairros$nome_bairr,
     se_var = "sem_not",
@@ -405,27 +417,30 @@ perda_notificação <- df_mun %>%
 
 ```{r calcular_alertas, include=FALSE}
 # Rt e nivel de alerta por agrupamento (funcoes do pacote)
-df_distritos <- bind_rows(
-  if (tem_dengue) calcular_alerta_cidade(
-    data = df_distritos %>% filter(arbo == "dengue"),
-    coluna_id = "id_distrito", params = params_modelo,
-    gtdist = "normal", meangt = 3, sdgt = 1
-  ),
-  if (tem_chikon) {
-    calcular_alerta_cidade(
-      data = df_distritos %>% filter(arbo == "chikon"),
-      coluna_id = "id_distrito", params = params_modelo,
-      gtdist = "normal", meangt = 2, sdgt = 2
-    )
+calcular_alerta_agravo <- function(agravo, meangt, sdgt) {
+  entrada <- df_distritos %>% filter(arbo == agravo)
+  alocados_atuais <- df_mun_ok %>% filter(arbo == agravo, substr(sem_not, 1, 4) == ano_atual)
+  if (!nrow(alocados_atuais)) {
+    entrada$Rt <- entrada$lwr <- entrada$upr <- NA_real_
+    entrada$nivel <- NA_integer_
+    entrada$receptivo <- NA_real_
+    return(entrada)
   }
+  calcular_alerta_cidade(entrada, coluna_id = "id_distrito", params = params_modelo,
+                        gtdist = "normal", meangt = meangt, sdgt = sdgt)
+}
+df_distritos <- bind_rows(
+  if (tem_dengue) calcular_alerta_agravo("dengue", meangt = 3, sdgt = 1),
+  if (tem_chikon) calcular_alerta_agravo("chikon", meangt = 2, sdgt = 2)
 )
+
 ```
 
 ```{r nowcasting, include=FALSE}
 # Nowcasting municipal e por agrupamento (opcional)
 dados_nowcast <- df_mun %>%
   filter(arbo == "dengue", lubridate::epiyear(dt_sin_pri) >= ano_atual - 2) %>%
-  filter(!is.na(dt_sin_pri), !is.na(dt_digita))
+  filter(!is.na(dt_sin_pri))
 
 niveis_mun <- dados_api %>%
   filter(arbo == "dengue") %>%
@@ -438,7 +453,7 @@ tem_nowcast <- nrow(mun_nowcast) > 0
 nomes_distritos <- sort(unique(ref_bairros$distrito))
 distritos_nowcast <- purrr::map(nomes_distritos, function(d) {
   dados_d <- df_mun_ok %>%
-    filter(arbo == "dengue", distrito == d, !is.na(dt_sin_pri), !is.na(dt_digita),
+    filter(arbo == "dengue", distrito == d, !is.na(dt_sin_pri),
            lubridate::epiyear(dt_sin_pri) >= ano_atual - 2)
   niveis_d <- df_distritos %>%
     filter(arbo == "dengue", distrito == d) %>%
@@ -855,7 +870,7 @@ Para a realização das análises foram utilizados os dados de notificação do 
 fig3
 ```
 
-Em `r ano_atual`, `r fmt(perda_total$perd)` das `r fmt(perda_total$notif)` notificações (`r fmt(perda_total$pct, 1)`%) não puderam ser alocadas em nenhum `r unid`. Foram identificadas `r n_divergencias_temporais` notificações com divergência entre data e código epidemiológico; os códigos informados foram preservados. A @tbl-perdas apresenta o número de casos notificados e perdidos nas três últimas semanas epidemiológicas, e a @fig-perdas, a série do último ano.
+Em `r ano_atual`, `r fmt(perda_total$perd)` das `r fmt(perda_total$notif)` notificações (`r fmt(perda_total$pct, 1)`%) não puderam ser alocadas em nenhum `r unid`. Foram identificadas `r n_divergencias_temporais` notificações com divergência entre data e código epidemiológico; os códigos informados foram preservados. Quando não há notificações alocadas de um agravo no ano analisado, seus níveis de alerta e Rt submunicipais ficam indisponíveis; zero alocado não significa ausência de casos no município. A @tbl-perdas apresenta o número de casos notificados e perdidos nas três últimas semanas epidemiológicas, e a @fig-perdas, a série do último ano.
 
 
 ```{r tbl-perdas}
