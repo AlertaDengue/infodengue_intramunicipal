@@ -1,8 +1,9 @@
 # Implementação dos ajustes do boletim
 
 Versão preparada: 0.1.0. Repositório: AlertaDengue/infodengue_intramunicipal.
-Os PRs são encadeados, estão em rascunho e devem ser incorporados na ordem abaixo.
-Nenhum merge ou publicação de versão foi feito automaticamente.
+Os PRs foram entregues em rascunho em 26/10/2026 e são encadeados na ordem abaixo.
+O estado atual de cada entrega pode ser consultado nos links dos PRs. A revisão de
+28/10/2026 e os merges foram autorizados pelo mantenedor; não há publicação automática de versão.
 
 | Etapa | PR | Entrega |
 | --- | --- | --- |
@@ -98,3 +99,26 @@ pelos parâmetros apropriados antes de produzir um boletim real.
 QMDs antigos precisam ser regenerados para receber o novo template. Os arquivos
 recebidos como `criar_qmd_boletim_v2.R` e `boletim_municipal_completo_att.qmd`
 foram integrados aos nomes canônicos do pacote; nenhum boletim depende de Downloads.
+
+## Revisão de 28/10/2026
+
+A revisão reproduziu e corrigiu três regressões adicionais no PR 11:
+
+- Estimativas e observações fora de ordem eram pareadas pela posição. Agora a
+  associação usa a semana epidemiológica, preservando ordem, valores ausentes e
+  os limites da regra legada. Semanas observadas duplicadas são rejeitadas.
+- Sem data de digitação, a curva observada perdia notificações com início de
+  sintomas conhecido. As 7.210 observações do caso sintético agora permanecem;
+  a restrição de datas completas aplica-se somente ao ajuste de nowcasting.
+- Sem notificações alocadas de um agravo, a grade e os gráficos falhavam. A
+  grade agora mantém todas as unidades, o relatório conserva o total perdido e
+  Rt/níveis submunicipais ficam explicitamente indisponíveis nesse cenário.
+
+Foram acrescentados testes do alinhamento por semana e o roteiro
+`tools/verificar_regressoes_boletim.R`, com os cenários `sem-digitacao`,
+`sem-alocacao` e `misto-sem-alocacao-chikon`. Todos passaram pela execução
+completa do QMD; o cenário sem alocação também foi compilado em PDF.
+A validação inicial acima registra 166 verificações; a revisão acrescenta cinco
+regressões unitárias, totalizando 171 verificações na suíte. A auditoria posterior
+aos merges compara os critérios do markdown original, sem tratar porcentagem de
+requisitos como cobertura geral de código ou garantia de ausência de defeitos.
