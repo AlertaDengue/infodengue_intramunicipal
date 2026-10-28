@@ -58,3 +58,4 @@ Depends:
     R (>= 4.1)
 Remotes: AlertaDengue/AlertTools
 LazyData: true
+LazyDataCompression: xz
