@@ -19,4 +19,3 @@ A @fig-mapas-dengue mostra a incidência de dengue por `r agr` nas semanas `r pa
 ```{r fig-mapas-dengue, fig.cap=paste0("Incidência de dengue (casos por 100 mil habitantes) por ", agr, " nas três últimas semanas epidemiológicas."), fig.width=10, fig.height=9, out.width="100%"}
 rf_map_distritos_dengon
 ```
-

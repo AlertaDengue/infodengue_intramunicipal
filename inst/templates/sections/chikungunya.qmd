@@ -24,4 +24,3 @@ plot_grid(plotlist = rf_inc_distritos_chikon, ncol = 2)
 ```{r fig-mapas-chikon, eval=tem_chikon, fig.cap=paste0("Incidência de chikungunya (casos por 100 mil habitantes) por ", agr, " nas três últimas semanas epidemiológicas."), fig.width=10, fig.height=9, out.width="100%"}
 rf_map_distritos_chikon
 ```
-

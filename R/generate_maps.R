@@ -11,7 +11,7 @@
 #' @param data Data frame ou objeto `sf` contendo os dados espaciais e
 #' epidemiológicos. Deve incluir as colunas `sem_not`, `arbo` e a variável
 #' especificada em `value_col`.
-#' @param weeks_2_plot Vetor numérico contendo as semanas epidemiológicas
+#' @param weeks_2_plotdistrito_nome Vetor numérico contendo as semanas epidemiológicas
 #' que devem ser representadas nos mapas.
 #' @param lim_range Vetor numérico de comprimento 2 definindo os limites
 #' mínimo e máximo da escala de cores. Se `NULL`, os limites são calculados
@@ -127,7 +127,7 @@ generate_maps <- function(data, weeks_2_plotdistrito_nome, lim_range = NULL,
       theme(axis.text = element_blank(),
             axis.ticks = element_blank(),
             legend.key.width = unit(1, "cm")) +  # Aumenta espaço para visualizar linhas
-      labs(title = paste("Semana de Notificação:", .x),
+      labs(title = paste("Semana de Notifica\u00e7\u00e3o:", .x),
            subtitle = paste("Porcentagem de casos perdidos:", round(percent_na, 2), "%"))
 
     return(p)

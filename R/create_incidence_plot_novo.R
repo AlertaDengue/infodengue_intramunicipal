@@ -45,9 +45,9 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
   plot_title <- if (!is.null(title_suffix)) {
     title_suffix
   } else if (!is.null(distrito_nome)) {
-    paste0("Curva de incidência - ", distrito_nome, " até SE", weeks_limit)
+    paste0("Curva de incid\u00eancia - ", distrito_nome, " at\u00e9 SE", weeks_limit)
   } else {
-    "Curva de incidência"
+    "Curva de incid\u00eancia"
   }
 
   start_week <- calcular_inicio_janela_1ano(weeks_limit)
@@ -84,7 +84,7 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
       alpha = 0.2
     ) +
     (if (length(limiar_epidemico) == 1L && is.finite(limiar_epidemico)) ggplot2::geom_hline(yintercept = limiar_epidemico, col = "red", show.legend = FALSE)) +
-    (if (length(limiar_epidemico) == 1L && is.finite(limiar_epidemico)) ggplot2::geom_text(ggplot2::aes(x = 10, y = limiar_epidemico + 1, label = "Limiar Epidêmico"))) +
+    (if (length(limiar_epidemico) == 1L && is.finite(limiar_epidemico)) ggplot2::geom_text(ggplot2::aes(x = 10, y = limiar_epidemico + 1, label = "Limiar Epid\u00eamico"))) +
     (if (nrow(nowcast_window)) ggplot2::scale_color_manual(
       name = NULL,
       values = c("Nowcasting" = "red3"),
@@ -97,7 +97,7 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
         "Nowcasting" = "Nowcasting (IC 95%)",
         "1" = "Baixo Risco",
         "2" = "Receptivo",
-        "3" = "Transmissão",
+        "3" = "Transmiss\u00e3o",
         "4" = "Alta atividade"
       ),
       breaks = c("1", "2", "3", "4", "Nowcasting")
@@ -109,8 +109,8 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
     ) +
     ggplot2::scale_x_discrete(breaks = breaks_1ano) +
     ggplot2::labs(
-      x = "Semanas Epidemiológicas",
-      y = "Incidência (casos por 100.000 hab.)",
+      x = "Semanas Epidemiol\u00f3gicas",
+      y = "Incid\u00eancia (casos por 100.000 hab.)",
       title = plot_title
     )
 
@@ -157,12 +157,12 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
     (if (nrow(nowcast_window)) ggplot2::scale_color_manual(
       name = NULL,
       values = c("Nowcasting" = "red3", "1" = "green", "2" = "yellow", "3" = "orange", "4" = "red"),
-      labels = c("Nowcasting" = "Nowcasting", "1" = "Baixo Risco", "2" = "Receptivo", "3" = "Transmissão", "4" = "Alta atividade"),
+      labels = c("Nowcasting" = "Nowcasting", "1" = "Baixo Risco", "2" = "Receptivo", "3" = "Transmiss\u00e3o", "4" = "Alta atividade"),
       breaks = c("Nowcasting", "1", "2", "3", "4")
     )) +
     ggplot2::scale_fill_manual(values = c("Nowcasting" = "red3"), guide = "none") +
     ggplot2::theme_minimal() +
-    ggplot2::labs(x = NULL, y = NULL, title = "Últimas 5 semanas") +
+    ggplot2::labs(x = NULL, y = NULL, title = "\u00daltimas 5 semanas") +
     ggplot2::theme(
       legend.position = "none",
       axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 8),

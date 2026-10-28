@@ -1,116 +1,217 @@
 # infodengesubmunicipal
 
-Pacote em R para gerar boletins municipais de arboviroses em escala
-submunicipal, a partir de arquivos locais preparados pela equipe usuária.
+Pacote R para preparar dados locais e gerar boletins municipais de arboviroses
+com análises submunicipais, gráficos, mapas e tabelas em PDF.
+O boletim admite dengue, chikungunya ou as duas doenças no período analisado.
+Seções sem notificações no recorte são omitidas. Um período sem notificações
+produz uma saída informativa.
 
-O objetivo principal é apoiar equipes de vigilância e secretarias estaduais ou
-municipais que precisam produzir PDFs localmente, sem depender de acesso a APIs
-internas do InfoDengue.
-
-## O Que O Pacote Faz
-
-O pacote ajuda a:
-
-- validar dados locais de notificações;
-- padronizar nomes de bairros ou unidades locais;
-- combinar notificações com uma referência espacial e populacional;
-- calcular perdas de geolocalização por bairro/unidade;
-- gerar um arquivo `.qmd` pronto para renderizar um boletim em PDF;
-- produzir tabelas, gráficos e mapas básicos para acompanhamento municipal.
-
-A forma recomendada de uso é pela função:
+## Instalação e requisitos
 
 ```r
-criar_qmd_boletim()
-```
-
-Essa função cria um arquivo Quarto (`.qmd`) configurado para um município. O
-usuário depois renderiza esse `.qmd` para gerar o PDF.
-
-## Instalação
-
-Se você recebeu um arquivo `.tar.gz` do pacote, instale assim:
-
-```r
-install.packages(
-  "infodengesubmunicipal_0.0.0.9000.tar.gz",
-  repos = NULL,
-  type = "source"
-)
-```
-
-Se estiver instalando a partir de uma pasta local do pacote:
-
-```r
-install.packages("devtools")
-devtools::install("caminho/para/infodengesubmunicipal")
-```
-
-Depois carregue:
-
-```r
+install.packages("remotes")
+remotes::install_github("AlertaDengue/infodengue_intramunicipal")
 library(infodengesubmunicipal)
 ```
 
-Também é necessário ter o Quarto instalado para transformar o `.qmd` em PDF.
-No RStudio recente, o Quarto geralmente já vem incluído.
+O nome do repositório é `infodengue_intramunicipal`; o nome do pacote R é
+`infodengesubmunicipal`. O instalador `remotes` resolve também o remoto
+`AlertaDengue/AlertTools` declarado no pacote. Para instalar um arquivo fonte
+local, prepare as dependências antes de usar `install.packages(..., repos = NULL)`.
 
-Se o comando `quarto --version` não funcionar no terminal, instale o Quarto
-pelo site oficial:
-
-```text
-https://quarto.org/docs/get-started/
-```
-
-Depois de instalar, feche e abra novamente o terminal ou o RStudio e confira:
+Requisitos: R >= 4.1, ggplot2 >= 4.0.0 e o executável [Quarto](https://quarto.org/docs/get-started/).
+O pacote R `quarto` é opcional e não substitui o executável. Para PDF, recomendamos:
 
 ```sh
-quarto --version
+quarto install tinytex
 ```
 
-## Organização Recomendada Dos Arquivos
+Os templates verificam as dependências R e não instalam pacotes durante a
+renderização. `arrow` é opcional para arquivos Parquet. `nowcaster` e seu ambiente
+INLA são necessários somente para solicitar nowcasting; consulte as instruções
+específicas desses pacotes antes de habilitá-lo. `Suggests` não é instalado
+obrigatoriamente junto com o pacote.
 
-Crie uma pasta para cada município. Por exemplo:
+## Dados de entrada
 
-```text
-boletins/
-└── brasilia/
-    ├── notificacoes.parquet
-    ├── historico_alerta.csv
-    ├── referencia_submunicipal.rds
-    └── boletim_brasilia.qmd
+Os arquivos devem estar preparados localmente. O boletim não consulta APIs
+internas nem baixa dados durante sua execução. `ler_tabela_local()` lê CSV,
+Parquet, RDS, Rda e RData. Arquivos Rda/RData tabulares devem conter um objeto.
+A referência espacial admite também os nomes de objeto `ref_submunicipal`
+ou `df_intra_ref` em RData. A leitura de CSV preserva `nu_notific`, `id_bairro`
+e `nm_bairro` como texto, incluindo zeros à esquerda e sufixos.
+
+### Notificações
+
+| Coluna | Conteúdo |
+| --- | --- |
+| `municipio_geocodigo` | Identificador do município |
+| `nu_notific` | Identificador da notificação; único por agravo |
+| `cid10_codigo` | `A90` para dengue, `A920` ou `A92.0` para chikungunya |
+| `ano_notif`, `se_notif` | Ano e semana epidemiológicos informados |
+| `dt_notific`, `dt_sin_pri`, `dt_digita` | Datas ISO (`YYYY-MM-DD`); início dos sintomas e digitação podem ser ausentes |
+| `id_bairro`, `nm_bairro` | Identificação da unidade local; ausência pode impedir alocação |
+
+Os códigos de semanas usam domingo como início e a regra de quatro dias
+(`lubridate::epiyear()`/`epiweek()`). Anos com SE 53 são preservados.
+Divergências entre códigos informados e datas são contabilizadas no boletim,
+sem recalcular os códigos silenciosamente. Códigos de semanas inexistentes são
+rejeitados. As três semanas finais são consecutivas, incluindo semanas sem casos.
+
+O pareamento usa nomes normalizados e distância de Levenshtein até dois
+caracteres; escolhe o candidato mais próximo e não aloca empates. A base de
+referência deve ter identificadores e nomes normalizados únicos. As perdas
+consideram notificações não alocadas e não são substituídas por zeros na entrada.
+
+### Histórico municipal de alerta
+
+Pode ser um arquivo único com `arbo` (`dengue`, `chikon` ou `chikungunya`) ou
+arquivos separados somente dos agravos necessários. Em arquivos separados,
+a função adiciona o agravo. Não é necessário fabricar um arquivo vazio para a
+outra doença. Semanas duplicadas por agravo são rejeitadas.
+
+| Coluna | Obrigatória | Conteúdo e ausência |
+| --- | --- | --- |
+| `SE` | Sim | Semana `YYYYWW` válida |
+| `casos` | Sim | Casos observados, não negativos |
+| `p_inc100k` | Sim | Incidência municipal, não negativa |
+| `nivel` | Sim | Nível de alerta de 1 a 4; pode conter NA |
+| `Rt` | Sim | Número reprodutivo; pode conter NA |
+| `tempmin` | Sim | Temperatura mínima; pode conter NA |
+| `arbo` | No arquivo único | Identificação do agravo |
+| `casos_est` | Não | Estimativa fornecida no histórico; sem ela a tabela indica “Indisponível” |
+| `receptivo` | Não | Indicador de receptividade fornecido no histórico; ausente permanece NA |
+| `lwr`, `upr` | Não | Limites do intervalo do Rt; ausência não cria bandas artificiais |
+
+Casos observados nunca são rotulados automaticamente como estimativas.
+A receptividade climática é desenhada a partir de `tempmin`. O histórico municipal
+é uma fonte separada das notificações; totais e semanas podem divergir e devem
+ser conciliados pela equipe responsável. As curvas de dengue usam início dos
+sintomas; tabelas submunicipais e perdas usam a semana de notificação.
+
+### Referência espacial
+
+Forneça um objeto `sf` em RDS/RData com nome e ID da unidade, agrupamento,
+população e geometria. Informe os nomes reais das colunas ao gerador. A população
+dos agrupamentos inclui todas as unidades da referência, inclusive sem casos.
+IDs, nomes normalizados e agrupamentos devem estar preenchidos, com população
+positiva e geometria válida. Shapefiles podem ser preparados com `sf::st_read()`
+e salvos com `saveRDS()` antes de chamar o gerador.
+
+Não atribua um EPSG geográfico a coordenadas cartesianas sintéticas. Para CRS
+locais sem unidade conhecida, o desenho preserva as coordenadas no plano e usa
+uma cópia sem a etiqueta de CRS que o GDAL não consegue transformar. A referência
+original mantém seu CRS.
+
+## Exemplo reproduzível: Feira Livre
+
+Os dados incluídos são sintéticos: município fictício `999999`, 7.210 notificações
+de dengue, 28 bairros e quatro distritos. UF `XX` e os limiares abaixo são apenas
+demonstrativos; não são parâmetros estimados para um município real.
+
+```r
+library(infodengesubmunicipal)
+base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+saida <- file.path(tempdir(), "feira_livre")
+dir.create(saida, recursive = TRUE, showWarnings = FALSE)
+
+ref <- sf::st_read(
+  file.path(base, "shape", "feira_livre_bairros.shp"),
+  options = "ENCODING=UTF-8", quiet = TRUE
+)
+referencia <- file.path(saida, "referencia.rds")
+saveRDS(ref, referencia)
+
+qmd <- criar_qmd_boletim(
+  municipio_nome = "Feira Livre", uf = "XX", municipio_geocodigo = 999999,
+  ano = 2026, populacao = 250000,
+  output_qmd = file.path(saida, "boletim.qmd"),
+  notificacoes_path = file.path(base, "notificacoes.csv"),
+  historico_alerta_path = file.path(base, "historico_alerta.csv"),
+  referencia_path = referencia,
+  col_bairro_ref = "nm_bairro", col_bairro_id_ref = "id_bairro",
+  col_distrito_ref = "nm_distr", col_pop_ref = "pop",
+  col_geometry_ref = attr(ref, "sf_column"),
+  limiar_preseason = 5, limiar_epidemico = 50, limiar_posseason = 10,
+  limiar_completude = 70,
+  nome_unidade_local = "bairro", nome_unidade_local_plural = "bairros",
+  nome_agregacao = "distrito", nome_agregacao_plural = "distritos",
+  executar_nowcasting = FALSE, overwrite = TRUE
+)
 ```
 
-O pacote não baixa dados automaticamente. Os arquivos devem ser preparados e
-salvos localmente pela equipe usuária.
+Para gerar o PDF, use `render = TRUE` na chamada ou execute `quarto render`
+com o caminho retornado. Entradas são validadas e gravadas como caminhos
+absolutos; renderizar em outra pasta de trabalho não muda a localização dos dados.
+A definição do período usa o ano solicitado e a última semana disponível nesse
+ano nas fontes de entrada. Dados de anos posteriores não entram no boletim.
 
-## Arquivo De Notificações
+A soma populacional do shapefile é 249.990; o histórico usa denominador implícito
+de 250.000. O exemplo mantém cada fonte e seu denominador, sem alterar os
+originais para igualá-los. Em `202553`, o histórico contém 24 casos e os códigos
+das notificações indicam oito; há também divergências de datas nos registros.
+O boletim informa a quantidade dessas divergências e preserva os códigos de entrada.
 
-O arquivo de notificações pode ser `.csv`, `.parquet`, `.rds`, `.rda` ou
-`.RData`.
+No checkout do repositório, `data-raw/preparar_feira_livre.R` prepara a referência,
+e `tools/verificar_boletim.R` reproduz geração e validação em pasta separada:
 
-Ele deve conter, no mínimo, estas colunas:
+```sh
+Rscript tools/verificar_boletim.R /tmp/feira-livre dengue validar
+Rscript tools/verificar_boletim.R /tmp/feira-livre-pdf dengue pdf
+```
 
-| Coluna | Descrição |
-| --- | --- |
-| `municipio_geocodigo` | Código IBGE do município |
-| `dt_notific` | Data da notificação |
-| `dt_sin_pri` | Data dos primeiros sintomas |
-| `dt_digita` | Data de digitação |
-| `se_notif` | Semana epidemiológica da notificação |
-| `ano_notif` | Ano epidemiológico da notificação |
-| `cid10_codigo` | CID-10 do agravo |
-| `id_bairro` | Identificador do bairro ou unidade local |
-| `nm_bairro` | Nome do bairro ou unidade local |
-| `nu_notific` | Número da notificação |
+Os cenários `misto`, `chikungunya`, `vazio` e `logos` são derivados determinísticos
+dos dados sintéticos; `nowcasting` solicita o ajuste opcional. Não são dados
+reais de chikungunya. No conjunto original, 6.921 notificações são alocadas e
+conservadas na grade; 289 não são alocadas.
 
-Os CIDs usados pelo template são:
+## Logos, limiares e métodos
 
-| CID | Arbovirose |
-| --- | --- |
-| `A90` | dengue |
-| `A92.0` | chikungunya |
-| `A928` | zika |
+`logo_esquerda` e `logo_direita` são opcionais. Quando informados, devem apontar
+para imagens PNG válidas; serão copiadas como `logo1.png` e `logo2.png` ao lado
+do QMD. Sem argumentos, o cabeçalho não usa logos antigos que estejam na pasta.
+`overwrite = TRUE` permite substituir os arquivos gerados. A função protege os
+arquivos existentes antes de gravar; não basta renomear JPG/PDF para PNG.
+
+Os três limiares de incidência são obrigatórios, em casos por 100 mil habitantes,
+finitos e não negativos; o epidêmico não pode ser menor que os demais. A equipe
+usuária fornece seus limiares municipais. Eles não são automaticamente aplicados
+como limiares de cada agrupamento. `limiar_completude` é percentual de 0 a 100,
+com padrão 70. Nomes de unidades e agrupamentos têm argumentos para singular e plural.
+
+O nowcasting vem desabilitado por padrão. Se solicitado, o boletim identifica
+por unidade os estados desabilitado, indisponível, sem dados, ajustado ou falha.
+Falhas não são tratadas como ajustes bem-sucedidos. A curva apresenta o ajuste
+quando disponível; a tabela municipal usa `casos_est` do histórico. O pacote
+não instala `nowcaster` ou INLA durante a renderização.
+
+## API e migração
+
+As funções de entrada agora pertencem ao pacote: `ler_tabela_local()`,
+`validar_colunas()`, `preparar_referencia()` e `preparar_historico_alerta()`.
+`ultimas_semanas_epi()` gera uma sequência consecutiva pelo calendário.
+`completar_dados_bairros()` e sua versão `_novo` preservam semanas válidas e
+avisam quantas linhas/notificações ficam fora da grade configurada.
+
+`create_incidence_plot()`, `create_receptivity_plot()` e `create_rt_plot()`
+continuam disponíveis, mas emitem aviso de obsolescência. Use as versões
+`_novo`, passando os parâmetros explicitamente, ou seus aliases em português
+`criar_grafico_incidencia_novo()`, `criar_grafico_receptividade_novo()` e
+`criar_grafico_rt_novo()`. Os aliases antigos também encaminham o aviso.
+
+`create_map_panel()` e `criar_painel_mapas()` exibem todos os mapas recebidos,
+em ordem, com layout adaptável e uma legenda. Mapas devem compartilhar escalas
+compatíveis. Chamadores que desejam só três mapas devem selecioná-los explicitamente.
+
+O gerador e o boletim recebidos como `_v2.R` e `_att.qmd` foram integrados aos
+nomes canônicos do pacote. QMDs gerados anteriormente conservam seu código antigo:
+regere-os após atualizar o pacote, fornecendo os novos limiares. Nenhum PDF ou
+boletim anterior é atualizado automaticamente.
+
+## Preparação opcional com a API pública
+
+O download abaixo é uma etapa manual de preparação, anterior à renderização.
+Ele fornece séries municipais agregadas e não substitui as notificações locais.
 
 ### Baixar Dados Da API Pública Do InfoDengue
 
@@ -159,281 +260,3 @@ notificações usado pelo boletim submunicipal deve continuar contendo as
 colunas listadas acima, com identificação da unidade local (`id_bairro` e/ou
 `nm_bairro`). Se os dados baixados da API forem usados como parte do fluxo de
 preparação, transforme-os antes para o formato esperado pelo template.
-
-## Arquivo De Histórico De Alerta
-
-O histórico de alerta pode ser informado de duas formas.
-
-Opção 1: um único arquivo com dengue e chikungunya, contendo uma coluna `arbo`:
-
-```text
-historico_alerta.csv
-```
-
-Opção 2: dois arquivos separados:
-
-```text
-historico_alerta_dengue.csv
-historico_alerta_chikungunya.csv
-```
-
-O histórico deve conter, no mínimo:
-
-| Coluna | Descrição |
-| --- | --- |
-| `SE` | Semana epidemiológica no formato ano + semana, por exemplo `202620` |
-| `casos` | Casos observados |
-| `p_inc100k` | Incidência por 100 mil habitantes |
-| `nivel` | Nível de alerta |
-| `Rt` | Número reprodutivo |
-| `tempmin` | Temperatura mínima usada na receptividade |
-| `arbo` | Arbovirose, apenas se for arquivo único |
-
-Quando forem usados dois arquivos separados, o pacote adiciona `arbo`
-automaticamente.
-
-## Arquivo De Referência Submunicipal
-
-Esse arquivo informa a divisão territorial usada no boletim: bairros, regiões
-administrativas, distritos, regionais de saúde ou outra unidade local.
-
-Pode ser `.rds`, `.rda` ou `.RData`. O objeto deve ser uma tabela espacial
-`sf`, ou uma tabela com uma coluna de geometria compatível com `sf`.
-
-O template espera uma referência com estas informações:
-
-| Informação | Exemplo de coluna |
-| --- | --- |
-| Nome da unidade local | `nome_bairr`, `RA`, `bairro` |
-| Identificador da unidade local | `id_bairro`, `ID_DISTRITO` |
-| Agrupamento submunicipal | `distrito`, `RS`, `regional` |
-| População | `pop` |
-| Geometria | `geometry`, `geom` |
-
-Você informa os nomes reais das colunas ao chamar `criar_qmd_boletim()`. Em
-especial, `col_bairro_ref` e `col_bairro_id_ref` indicam quais colunas da
-referência serão comparadas com as colunas de unidade local do arquivo de
-notificações.
-
-Na prática, o valor informado em `col_bairro_ref` é comparado com a coluna
-nominal das notificações (`nm_bairro`), e o valor informado em
-`col_bairro_id_ref` é comparado com a coluna de identificador das notificações
-(`id_bairro`). Por isso, essas colunas precisam representar a mesma unidade
-territorial nos dois arquivos, mesmo que tenham nomes diferentes em cada base.
-
-## Gerar Um QMD Para Um Município
-
-Exemplo para Brasília:
-
-```r
-library(infodengesubmunicipal)
-
-criar_qmd_boletim(
-  municipio_nome = "Brasília",
-  uf = "DF",
-  municipio_geocodigo = 5300108,
-  ano = 2026,
-  populacao = 2817068,
-  output_qmd = "boletins/brasilia/boletim_brasilia.qmd",
-  notificacoes_path = "boletins/brasilia/notificacoes.parquet",
-  historico_alerta_path = "boletins/brasilia/historico_alerta.csv",
-  referencia_path = "boletins/brasilia/referencia_submunicipal.rds",
-  col_bairro_ref = "RA",
-  col_bairro_id_ref = "ID_DISTRITO",
-  col_distrito_ref = "RS",
-  col_pop_ref = "pop",
-  col_geometry_ref = "geom"
-)
-```
-
-Esse comando cria o arquivo:
-
-```text
-boletins/brasilia/boletim_brasilia.qmd
-```
-
-O arquivo gerado já contém os caminhos dos dados e a configuração do município.
-
-## Renderizar O PDF
-
-No R:
-
-```r
-quarto::quarto_render("boletins/brasilia/boletim_brasilia.qmd")
-```
-
-Ou pelo terminal:
-
-```sh
-quarto render boletins/brasilia/boletim_brasilia.qmd
-```
-
-Também é possível pedir para a função criar e renderizar em seguida:
-
-```r
-criar_qmd_boletim(
-  municipio_nome = "Brasília",
-  uf = "DF",
-  municipio_geocodigo = 5300108,
-  ano = 2026,
-  populacao = 2817068,
-  output_qmd = "boletins/brasilia/boletim_brasilia.qmd",
-  notificacoes_path = "boletins/brasilia/notificacoes.parquet",
-  historico_alerta_path = "boletins/brasilia/historico_alerta.csv",
-  referencia_path = "boletins/brasilia/referencia_submunicipal.rds",
-  col_bairro_ref = "RA",
-  col_bairro_id_ref = "ID_DISTRITO",
-  col_distrito_ref = "RS",
-  col_pop_ref = "pop",
-  col_geometry_ref = "geom",
-  render = TRUE
-)
-```
-
-## Usando Histórico Em Dois Arquivos
-
-Se dengue e chikungunya estiverem separados:
-
-```r
-criar_qmd_boletim(
-  municipio_nome = "Município Exemplo",
-  uf = "UF",
-  municipio_geocodigo = 1234567,
-  ano = 2026,
-  populacao = 100000,
-  output_qmd = "boletim_exemplo.qmd",
-  notificacoes_path = "dados/notificacoes.parquet",
-  historico_alerta_dengue_path = "dados/historico_dengue.csv",
-  historico_alerta_chikungunya_path = "dados/historico_chikungunya.csv",
-  referencia_path = "dados/referencia_submunicipal.rds"
-)
-```
-
-## Atualizar Um QMD Existente
-
-Por segurança, a função não sobrescreve um `.qmd` que já existe. Para substituir
-um arquivo existente:
-
-```r
-criar_qmd_boletim(
-  municipio_nome = "Brasília",
-  uf = "DF",
-  municipio_geocodigo = 5300108,
-  ano = 2026,
-  populacao = 2817068,
-  output_qmd = "boletins/brasilia/boletim_brasilia.qmd",
-  notificacoes_path = "boletins/brasilia/notificacoes.parquet",
-  historico_alerta_path = "boletins/brasilia/historico_alerta.csv",
-  referencia_path = "boletins/brasilia/referencia_submunicipal.rds",
-  overwrite = TRUE
-)
-```
-
-## Erros Comuns
-
-### "arquivo nao encontrado"
-
-Verifique se o caminho informado existe a partir da pasta onde o R está sendo
-executado.
-
-Use:
-
-```r
-getwd()
-file.exists("caminho/do/arquivo.csv")
-```
-
-### "nao contem as colunas obrigatorias"
-
-O arquivo foi encontrado, mas alguma coluna esperada está ausente ou com outro
-nome. Confira os nomes com:
-
-```r
-names(read.csv("arquivo.csv"))
-```
-
-Para arquivos `.parquet`:
-
-```r
-arrow::read_parquet("arquivo.parquet") |> names()
-```
-
-### "Quarto nao encontrado"
-
-Instale o Quarto ou use uma versão recente do RStudio.
-
-Site do Quarto:
-
-```text
-https://quarto.org/
-```
-
-### Nomes De Bairro Não Casam Com A Referência
-
-O template normaliza nomes removendo acentos e padronizando caixa, mas grafias
-muito diferentes ainda podem impedir a alocação. Revise:
-
-- `nm_bairro` nas notificações;
-- a coluna de nome da unidade local na referência;
-- abreviações, espaços extras e nomes antigos.
-
-## O Que O QMD Gerado Produz
-
-O QMD gerado espelha a estrutura visual do boletim consolidado usado como
-referência no projeto. Ele inclui:
-
-- cabeçalho e rodapé do boletim;
-- contextualização territorial;
-- mapa da divisão local;
-- mapa dos agrupamentos submunicipais;
-- gráfico de completude dos dados;
-- tabela e gráfico de perdas de notificação;
-- tabela municipal de situação recente;
-- curva de incidência municipal;
-- gráfico de receptividade climática;
-- comparação da incidência com anos anteriores;
-- Rt municipal;
-- tabelas por unidade submunicipal;
-- curvas de incidência por unidade submunicipal;
-- mapas submunicipais para dengue e chikungunya;
-- Rt por unidade submunicipal;
-- descrição dos indicadores e anexo.
-
-A equipe pode editar textos, títulos e seções do boletim gerado sem alterar o
-pacote.
-
-## Observação Sobre Privacidade E Acesso A Dados
-
-O pacote não exige token e não consulta API interna. Todos os dados usados no
-boletim são arquivos locais indicados pelo usuário. A responsabilidade por
-armazenamento, sigilo e compartilhamento dos dados segue as normas da secretaria
-ou instituição responsável.
-
-## Suporte Operacional
-
-Ao pedir ajuda sobre um erro, envie:
-
-- a mensagem completa do erro;
-- o trecho do `.qmd` onde o erro ocorreu;
-- os nomes das colunas dos arquivos de entrada;
-- a versão do R e do Quarto.
-
-Com isso, normalmente é possível identificar rapidamente se o problema está no
-caminho do arquivo, no contrato de colunas ou na referência espacial.
-
-## Dependências do boletim
-
-O fluxo exige ggplot2 4.0 ou superior. Instale o pacote com
-`remotes::install_github("AlertaDengue/infodengue_intramunicipal", dependencies = TRUE)`
-para resolver também as dependências opcionais e o remoto de AlertTools.
-`arrow` é necessário somente para Parquet; `nowcaster` é opcional no novo fluxo
-e exige seu próprio ambiente de modelagem (incluindo INLA). Os templates não
-instalam pacotes durante a renderização. O pacote R `quarto` não substitui
-o executável Quarto. Para PDF, recomendamos `quarto install tinytex`.
-
-O gerador agora exige os três limiares epidemiológicos do município; os logos
-são opcionais (`logo_esquerda = NULL`, `logo_direita = NULL`). A completude
-usa percentual de 0 a 100 (padrão 70). Os rótulos têm argumentos explícitos
-para singular e plural. Os caminhos de entrada são gravados como absolutos;
-`overwrite = TRUE` autoriza substituir o QMD e os logos copiados. O nowcasting
-é solicitado explicitamente com `executar_nowcasting = TRUE` (padrão FALSE).

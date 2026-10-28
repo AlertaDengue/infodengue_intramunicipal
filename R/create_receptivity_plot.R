@@ -59,14 +59,14 @@ create_receptivity_plot <- function(api_data, weeks_limit) {
               color = "orange2", linewidth = 1) +
     scale_fill_manual(values = c("TRUE" = "steelblue", "FALSE" = "grey70"), guide = "none") +
 
-    geom_hline(aes(yintercept = 18, color = "Limiar Favorável (18°C)"),
+    geom_hline(aes(yintercept = 18, color = "Limiar Favor\u00e1vel (18\u00b0C)"),
                linewidth = 1, linetype = "dashed") +
     scale_color_manual(values = c("red")) +
     scale_x_discrete(breaks = breaks_1ano) +
     scale_y_continuous(
-      name = "Temperatura Mínima (°C)") +
-    labs(x = "Semanas Epidemiológicas",
-         title = "Receptividade climática e Temperatura Mínima por Semana",
+      name = "Temperatura M\u00ednima (\u00b0C)") +
+    labs(x = "Semanas Epidemiol\u00f3gicas",
+         title = "Receptividade clim\u00e1tica e Temperatura M\u00ednima por Semana",
          color = "") +
     theme_minimal() +
     theme(

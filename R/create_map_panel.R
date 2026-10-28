@@ -5,7 +5,7 @@
 #' @return Um ggplot composto, com todos os mapas e legenda compartilhada.
 #' @details Os mapas com preenchimento devem usar escalas e limites compativeis.
 #' @export
-create_map_panel <- function(plots_list, legend_title = "Incidência (100.000 pessoas)", ncol = NULL) {
+create_map_panel <- function(plots_list, legend_title = "Incid\u00eancia (100.000 pessoas)", ncol = NULL) {
   if (!is.list(plots_list) || !length(plots_list) ||
       !all(vapply(plots_list, inherits, logical(1), "ggplot"))) {
     stop("plots_list deve conter ao menos um ggplot.", call. = FALSE)

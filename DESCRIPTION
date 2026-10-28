@@ -1,6 +1,6 @@
 Package: infodengesubmunicipal
 Title: Ferramentas para Analise Epidemiologica Submunicipal
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person(
       given = "Quemuel",
@@ -23,7 +23,6 @@ Imports:
     assertthat,
     cowplot,
     dplyr,
-    epical,
     foreign,
     fuzzyjoin,
     ggplot2 (>= 4.0.0),
@@ -33,6 +32,7 @@ Imports:
     gtable,
     jsonlite,
     kableExtra,
+    knitr,
     lubridate,
     magrittr,
     patchwork,
@@ -40,6 +40,7 @@ Imports:
     purrr,
     readr,
     rlang,
+    rmarkdown,
     sf,
     stringr,
     tibble,
@@ -54,6 +55,6 @@ Suggests:
     withr
 Config/testthat/edition: 3
 Depends: 
-    R (>= 3.5)
+    R (>= 4.1)
 Remotes: AlertaDengue/AlertTools
 LazyData: true

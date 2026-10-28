@@ -16,7 +16,7 @@
 completar_dados_bairros_novo <- function(dados_bairros, bairros_unicos, se_var,
                                          nm_bairr_var, group_var = "arbo",
                                          max_semana_epidemiologica = NULL,
-                                         count_var = "notificações") {
+                                         count_var = "notifica\u00e7\u00f5es") {
   required_cols <- c(se_var, nm_bairr_var, group_var, count_var)
   missing_cols <- setdiff(required_cols, names(dados_bairros))
 

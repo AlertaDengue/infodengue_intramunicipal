@@ -20,6 +20,9 @@ generate_maps(
 epidemiológicos. Deve incluir as colunas \code{sem_not}, \code{arbo} e a variável
 especificada em \code{value_col}.}
 
+\item{weeks_2_plotdistrito_nome}{Vetor numérico contendo as semanas epidemiológicas
+que devem ser representadas nos mapas.}
+
 \item{lim_range}{Vetor numérico de comprimento 2 definindo os limites
 mínimo e máximo da escala de cores. Se \code{NULL}, os limites são calculados
 automaticamente a partir dos dados.}
@@ -38,9 +41,6 @@ adicionais a serem desenhados sobre o mapa (ex.: regiões ou distritos).}
 
 \item{area}{String opcional indicando a coluna em \code{shape} usada para
 diferenciar áreas por tipo de linha (\code{linetype}).}
-
-\item{weeks_2_plot}{Vetor numérico contendo as semanas epidemiológicas
-que devem ser representadas nos mapas.}
 }
 \value{
 Uma lista de objetos \code{ggplot}, onde cada elemento corresponde a um

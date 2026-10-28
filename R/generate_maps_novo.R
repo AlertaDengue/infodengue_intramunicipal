@@ -126,7 +126,7 @@ generate_maps_novo <- function(data, weeks_2_plot, lim_range = NULL,
         legend.key.width = grid::unit(1, "cm")
       ) +
       ggplot2::labs(
-        title = paste("Semana de Notificação:", week),
+        title = paste("Semana de Notifica\u00e7\u00e3o:", week),
         subtitle = subtitle
       )
   })

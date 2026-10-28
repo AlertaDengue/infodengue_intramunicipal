@@ -24,18 +24,18 @@ create_rt_plot_novo <- function(api_data, weeks_limit, title_suffix, breaks_1ano
   if (length(missing_cols) > 0) {
     stop(
       paste(
-        "Colunas obrigatórias não encontradas nos dados:",
+        "Colunas obrigat\u00f3rias n\u00e3o encontradas nos dados:",
         paste(missing_cols, collapse = ", ")
       )
     )
   }
 
   if (!is.null(lwr) && !lwr %in% names(api_data)) {
-    warning(paste("Coluna", lwr, "não encontrada nos dados. Ribbon será ignorado."))
+    warning(paste("Coluna", lwr, "n\u00e3o encontrada nos dados. Ribbon ser\u00e1 ignorado."))
     lwr <- NULL
   }
   if (!is.null(upr) && !upr %in% names(api_data)) {
-    warning(paste("Coluna", upr, "não encontrada nos dados. Ribbon será ignorado."))
+    warning(paste("Coluna", upr, "n\u00e3o encontrada nos dados. Ribbon ser\u00e1 ignorado."))
     upr <- NULL
   }
 
@@ -55,7 +55,7 @@ create_rt_plot_novo <- function(api_data, weeks_limit, title_suffix, breaks_1ano
       ) +
       ggplot2::geom_hline(yintercept = 1, linetype = 2, col = "red") +
       ggplot2::scale_x_discrete(breaks = breaks_1ano) +
-      ggplot2::labs(x = "Semanas Epidemiológicas", y = "Rt", title = title_suffix) +
+      ggplot2::labs(x = "Semanas Epidemiol\u00f3gicas", y = "Rt", title = title_suffix) +
       ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(legend.position = "top", axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 
@@ -85,7 +85,7 @@ create_rt_plot_novo <- function(api_data, weeks_limit, title_suffix, breaks_1ano
     ) +
     ggplot2::geom_hline(yintercept = 1, linetype = 2, col = "red") +
     ggplot2::scale_x_discrete(breaks = breaks_1ano) +
-    ggplot2::labs(x = "Semanas Epidemiológicas", y = "Rt", title = title_suffix) +
+    ggplot2::labs(x = "Semanas Epidemiol\u00f3gicas", y = "Rt", title = title_suffix) +
     ggplot2::theme_minimal(base_size = 15) +
     ggplot2::theme(legend.position = "top", axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 
@@ -125,7 +125,7 @@ create_rt_plot_novo <- function(api_data, weeks_limit, title_suffix, breaks_1ano
       ggplot2::geom_hline(yintercept = 1, linetype = 2, col = "red") +
       ggplot2::scale_x_discrete(breaks = breaks_1ano) +
       ggplot2::labs(
-        x = "Semanas Epidemiológicas",
+        x = "Semanas Epidemiol\u00f3gicas",
         y = "Rt",
         title = paste(title_suffix, "", level)
       ) +

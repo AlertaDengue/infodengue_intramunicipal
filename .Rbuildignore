@@ -6,3 +6,11 @@
 ^\.Rproj\.user$
 ^.*\.Rcheck$
 ^.*[.]tar[.]gz$
+^\.Rhistory$
+^\.DS_Store$
+^\.venv$
+^teste_qmd_infodengue$
+^feira_livre$
+^funcoes_submunicipal[.]R$
+^boletim_intramunicipal_consolidado[.]qmd$
+^tests/testthat/Rplots[.]pdf$

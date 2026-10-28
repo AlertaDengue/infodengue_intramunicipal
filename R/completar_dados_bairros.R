@@ -54,6 +54,6 @@ completar_dados_bairros <- function(dados_bairros, bairros_unicos, se_var, nm_ba
 
   completar_dados_bairros_novo(
     dados_bairros, bairros_unicos, se_var, nm_bairr_var,
-    group_var, max_semana_epidemiologica, count_var = "notificações"
+    group_var, max_semana_epidemiologica, count_var = "notifica\u00e7\u00f5es"
   )
 }
