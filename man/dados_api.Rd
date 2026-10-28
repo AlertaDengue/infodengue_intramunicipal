@@ -12,6 +12,6 @@ dados_api
 }
 \description{
 Dados de exemplo legados do repositorio. Para um exemplo explicitamente
-sintetico e reproduzivel, use os arquivos de Feira Livre em extdata.
+sintetico e reproduzivel, use os dados de Feira Livre em \code{dados}.
 }
 \keyword{datasets}

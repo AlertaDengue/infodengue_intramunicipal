@@ -109,6 +109,31 @@ Os dados incluídos são sintéticos: município fictício `999999`, 7.210 notif
 de dengue, 28 bairros e quatro distritos. UF `XX` e os limiares abaixo são apenas
 demonstrativos; não são parâmetros estimados para um município real.
 
+As tres bases tambem sao dados nativos do pacote, acessiveis diretamente:
+
+```r
+library(infodengesubmunicipal)
+infodengesubmunicipal::historico_alerta
+infodengesubmunicipal::notificacoes_alerta
+infodengesubmunicipal::referencia_intramunicipal
+
+# Carregamento individual com data()
+data("historico_alerta", package = "infodengesubmunicipal")
+data("notificacoes_alerta", package = "infodengesubmunicipal")
+data("referencia_intramunicipal", package = "infodengesubmunicipal")
+
+# Ou as tres bases reunidas em uma lista
+data(dados, package = "infodengesubmunicipal")
+names(dados)
+notificacoes <- dados$notificacoes_alerta
+```
+
+O nome do pacote e `infodengesubmunicipal`; `infodengue_intramunicipal` e o
+nome do repositorio. A grafia do objeto de notificacoes e `notificacoes_alerta`.
+As tabelas preservam identificadores textuais e datas; a referencia e um objeto
+`sf` com o CRS local original. Os arquivos em `extdata` continuam disponiveis
+para o gerador de boletins, que recebe caminhos:
+
 ```r
 library(infodengesubmunicipal)
 base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
