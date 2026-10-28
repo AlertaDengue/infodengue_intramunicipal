@@ -8,6 +8,7 @@ cat(paste0("A @tbl-chikon apresenta casos acumulados e notificados, incidência 
 ```
 
 ```{r tbl-chikon, eval=tem_chikon}
+#| tbl-pos: H
 #| tbl-cap: "Situação de chikungunya por agrupamento."
 tab5
 ```
