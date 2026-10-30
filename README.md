@@ -19,8 +19,11 @@ O nome do repositório é `infodengue_intramunicipal`; o nome do pacote R é
 `AlertaDengue/AlertTools` declarado no pacote. Para instalar um arquivo fonte
 local, prepare as dependências antes de usar `install.packages(..., repos = NULL)`.
 
-Requisitos: R >= 4.1, ggplot2 >= 4.0.0 e o executável [Quarto](https://quarto.org/docs/get-started/).
-O pacote R `quarto` é opcional e não substitui o executável. Para PDF, recomendamos:
+Requisitos: R >= 4.1, ggplot2 >= 4.0.0 e o **executável [Quarto](https://quarto.org/docs/get-started/)**.
+
+Versões mais recentes do RStudio já incluem o Quarto porém, e caso a versão instalada em seu computador não possua, a instalação pode ser feita a partir do download no endereço https://quarto.org/docs/download/.O pacote R `quarto` é opcional e não substitui o executável. 
+
+Para gerar o arquivo PDF é necessário a instalação de uma distribuição latex, que após a instalação do quarto, pode ser instada com o comando abaixo:
 
 ```sh
 quarto install tinytex
@@ -34,14 +37,24 @@ obrigatoriamente junto com o pacote.
 
 ## Dados de entrada
 
-Os arquivos devem estar preparados localmente. O boletim não consulta APIs
-internas nem baixa dados durante sua execução. `ler_tabela_local()` lê CSV,
+Os arquivos devem estar preparados localmente. **O boletim não consulta APIs
+internas nem baixa dados durante sua execução**. Para a geração dos relatórios é necessário fornecer o caminho para três conjuntos de dados: 
+1. `notificacoes_path`: arquivo com as notificações dos casos;
+2. `referencia_path`: referência intramunicipal do munícipio, que reúne bairros (e seus agrupamentos), população e geometrias; 
+3. `historico_alerta_path`:  tabela com o histórico de alerta do município, valor do Rt, dentre outras métricas, acessível a partir da [API](https://info.dengue.mat.br/services/api) do InfoDengue. 
+
+A função `ler_tabela_local()`, utilizada para ler os arquivos, lê CSV,
 Parquet, RDS, Rda e RData. Arquivos Rda/RData tabulares devem conter um objeto.
 A referência espacial admite também os nomes de objeto `ref_submunicipal`
 ou `df_intra_ref` em RData. A leitura de CSV preserva `nu_notific`, `id_bairro`
 e `nm_bairro` como texto, incluindo zeros à esquerda e sufixos.
 
+Abaixo são apresentadas as colunas que cada um desses arquivos deve conter. 
+
+
 ### Notificações
+
+A tabela com as notificações deve, **obrigatoriamente**, conter as colunas abaixo: 
 
 | Coluna | Conteúdo |
 | --- | --- |
@@ -58,10 +71,21 @@ Divergências entre códigos informados e datas são contabilizadas no boletim,
 sem recalcular os códigos silenciosamente. Códigos de semanas inexistentes são
 rejeitados. As três semanas finais são consecutivas, incluindo semanas sem casos.
 
-O pareamento usa nomes normalizados e distância de Levenshtein até dois
-caracteres; escolhe o candidato mais próximo e não aloca empates. A base de
+
+### Referência espacial
+
+Forneça um objeto `sf` em RDS/RData com nome e ID da unidade, agrupamento,
+população e geometria. Informe os nomes reais das colunas ao gerador. A população
+dos agrupamentos inclui todas as unidades da referência, inclusive sem casos.
+IDs, nomes normalizados e agrupamentos devem estar preenchidos, com população
+positiva e geometria válida. Shapefiles podem ser preparados com `sf::st_read()`
+e salvos com `saveRDS()` antes de chamar o gerador.
+
+O pareamento entre o arquivo de notificações e de referência espacial para a alocação dos casos nos bairros usa nomes normalizados e distância de Levenshtein de até dois
+caracteres e escolhe o candidato mais próximo, ele não aloca empates. A base de
 referência deve ter identificadores e nomes normalizados únicos. As perdas
 consideram notificações não alocadas e não são substituídas por zeros na entrada.
+
 
 ### Histórico municipal de alerta
 
@@ -89,19 +113,6 @@ A receptividade climática é desenhada a partir de `tempmin`. O histórico muni
 ser conciliados pela equipe responsável. As curvas de dengue usam início dos
 sintomas; tabelas submunicipais e perdas usam a semana de notificação.
 
-### Referência espacial
-
-Forneça um objeto `sf` em RDS/RData com nome e ID da unidade, agrupamento,
-população e geometria. Informe os nomes reais das colunas ao gerador. A população
-dos agrupamentos inclui todas as unidades da referência, inclusive sem casos.
-IDs, nomes normalizados e agrupamentos devem estar preenchidos, com população
-positiva e geometria válida. Shapefiles podem ser preparados com `sf::st_read()`
-e salvos com `saveRDS()` antes de chamar o gerador.
-
-Não atribua um EPSG geográfico a coordenadas cartesianas sintéticas. Para CRS
-locais sem unidade conhecida, o desenho preserva as coordenadas no plano e usa
-uma cópia sem a etiqueta de CRS que o GDAL não consegue transformar. A referência
-original mantém seu CRS.
 
 ## Exemplo reproduzível: Feira Livre
 
