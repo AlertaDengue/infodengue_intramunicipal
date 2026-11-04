@@ -3,8 +3,8 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1L) stop("Informe uma pasta de saida.")
 scenario <- if (length(args) > 1L) args[2] else "dengue"
 acao <- if (length(args) > 2L) args[3] else "gerar"
-library(infodengesubmunicipal)
-base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+library(infodengueintramunicipal)
+base <- system.file("extdata", "feira_livre", package = "infodengueintramunicipal")
 saida <- args[1]; dir.create(saida, recursive = TRUE, showWarnings = FALSE)
 saida <- normalizePath(saida)
 ref <- sf::st_read(file.path(base, "shape", "feira_livre_bairros.shp"), options = "ENCODING=UTF-8", quiet = TRUE)
@@ -42,7 +42,7 @@ qmd <- criar_qmd_boletim(
   col_distrito_ref = "nm_distr", col_pop_ref = "pop", col_geometry_ref = attr(ref, "sf_column"),
   # Valores exclusivamente demonstrativos; nao sao limiares municipais estimados por MEM.
   limiar_preseason = 5, limiar_epidemico = 50, limiar_posseason = 10,
-  logo_esquerda = logo, logo_direita = logo, overwrite = TRUE,
+  logo_direita = logo, overwrite = TRUE,
   executar_nowcasting = identical(scenario, "nowcasting"), render = identical(acao, "pdf")
 )
 cat(qmd, "\n")
@@ -59,6 +59,11 @@ if (identical(acao, "validar")) {
               identical(as.integer(e$weeks_2_plot), if (scenario == "ano-2025") c(202551L, 202552L, 202553L) else c(202635L, 202636L, 202637L)),
               sum(e$perda_notificação$notificações_bruto) == nrow(e$df_mun),
               sum(e$perda_notificação$perca) + nrow(e$df_mun_ok) == nrow(e$df_mun))
+    if (scenario == "nowcasting") {
+      stopifnot(e$tem_nowcast, length(e$estados_nowcasting) == 5L,
+                all(unlist(e$estados_nowcasting) == "ajustado"),
+                all(c("ano_epi", "Median", "LI", "LS") %in% names(e$mun_nowcast)))
+    }
     if (scenario == "chikon-historico") stopifnot(!e$tem_chikon, e$n_divergencias_temporais == 143L)
     if (scenario == "ano-2025") stopifnot(e$ano_atual == 2025, all(as.integer(e$df_mun$ano_notif) <= 2025))
     cat("Bruto:", nrow(e$df_mun), "alocado:", nrow(e$df_mun_ok),

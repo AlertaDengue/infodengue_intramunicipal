@@ -43,7 +43,7 @@
 #' @seealso [create_receptivity_plot_novo()]
 #' @export
 create_receptivity_plot <- function(api_data, weeks_limit) {
-  .Deprecated("create_receptivity_plot_novo", package = "infodengesubmunicipal")
+  .Deprecated("create_receptivity_plot_novo", package = "infodengueintramunicipal")
   # Calcular fator de escala
   # scale_factor <- max(api_data$receptivo, na.rm = TRUE) / max(api_data$tempmin, na.rm = TRUE)
 

@@ -28,7 +28,7 @@ Identificadores textuais, datas, valores ausentes e divergencias dos arquivos
 originais sao preservados; os dados nao representam um municipio real.
 }
 \examples{
-data("notificacoes_alerta", package = "infodengesubmunicipal")
+data("notificacoes_alerta", package = "infodengueintramunicipal")
 head(notificacoes_alerta)
 }
 \seealso{

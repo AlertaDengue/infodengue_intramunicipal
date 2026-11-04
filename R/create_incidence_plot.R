@@ -59,7 +59,7 @@ create_incidence_plot <- function(nowcast_data, observed_data, title_suffix = NU
                                   distrito_nome = NULL, SE = NULL,
                                   ylim_max = NULL, include_zoom = FALSE, pop = pop,
                                   convert_to_incidence = F) {
-  .Deprecated("create_incidence_plot_novo", package = "infodengesubmunicipal")
+  .Deprecated("create_incidence_plot_novo", package = "infodengueintramunicipal")
 
   # Transformar em incidência se solicitado
   if (convert_to_incidence) {

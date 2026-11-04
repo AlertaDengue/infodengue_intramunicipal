@@ -92,7 +92,7 @@ Rscript tools/verificar_boletim.R /tmp/feira-livre-2025 ano-2025 validar
 Rscript tools/verificar_boletim.R /tmp/feira-livre-pdf dengue pdf
 ```
 
-O cenário `nowcasting` solicita INLA. O padrão é não ajustar nowcasting. Os limiares
+O cenário `nowcasting` solicita o modelo mgcv do nowcaster mais recente. O padrão é não ajustar nowcasting. Os limiares
 5, 50 e 10 e a UF XX usados nos roteiros são demonstrativos; devem ser substituídos
 pelos parâmetros apropriados antes de produzir um boletim real.
 

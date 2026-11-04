@@ -24,7 +24,7 @@ tambem pode ser carregada individualmente com data() ou acessada por \code{::}.
 Os arquivos originais continuam disponiveis em extdata/feira_livre.
 }
 \examples{
-data(dados, package = "infodengesubmunicipal")
+data(dados, package = "infodengueintramunicipal")
 names(dados)
 nrow(dados$notificacoes_alerta)
 }

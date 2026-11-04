@@ -34,9 +34,9 @@
 #'   `"regiões administrativas"`).
 #' @param limiar_completude Completude minima recomendada (%) das variaveis de
 #'   localizacao, mostrada no grafico de completude.
-#' @param logo_esquerda,logo_direita Caminhos opcionais para as imagens do
-#'   cabecalho. Sao copiadas para a pasta do `.qmd` como `logo1.png` e
-#'   `logo2.png`. Sem elas, o cabecalho e gerado sem logos.
+#' @param logo_direita Caminho opcional para imagem PNG do cabecalho direito,
+#'   copiada como `logo2.png`. O logo oficial do InfoDengue e incluido pelo
+#'   pacote e sempre copiado como `logo1.png` para o cabecalho esquerdo.
 #' @param executar_nowcasting Se TRUE, solicita ajuste opcional de nowcasting.
 #' @param overwrite Se `TRUE`, sobrescreve `output_qmd` quando ele ja existe.
 #' @param render Se `TRUE`, renderiza o QMD apos cria-lo.
@@ -68,7 +68,6 @@ criar_qmd_boletim <- function(
     nome_agregacao = "distrito",
     nome_agregacao_plural = "distritos",
     limiar_completude = 70,
-    logo_esquerda = NULL,
     logo_direita = NULL,
     overwrite = FALSE,
     render = FALSE,
@@ -103,7 +102,9 @@ criar_qmd_boletim <- function(
   if (!arquivo_informado(historico_alerta_path) && !arquivo_informado(historico_alerta_dengue_path) &&
       !arquivo_informado(historico_alerta_chikungunya_path)) stop("Informe historico_alerta_path ou ao menos um historico por agravo.", call. = FALSE)
   if (!grepl("[.]qmd$", output_qmd, ignore.case = TRUE)) stop("output_qmd deve terminar em .qmd.", call. = FALSE)
-  logos <- list(logo1.png = logo_esquerda, logo2.png = logo_direita)
+  logo_infodengue <- system.file("logos", "infodengue.png", package = "infodengueintramunicipal")
+  validar_arquivo(logo_infodengue, "Logo oficial do InfoDengue")
+  logos <- list(logo1.png = logo_infodengue, logo2.png = logo_direita)
   for (logo in logos) {
     if (!is.null(logo)) {
       validar_arquivo(logo, "logo")
@@ -139,7 +140,7 @@ criar_qmd_boletim <- function(
     nome_agregacao_plural = nome_agregacao_plural,
     limiar_completude = limiar_completude,
     executar_nowcasting = executar_nowcasting,
-    logo_esquerda_arquivo = if (is.null(logo_esquerda)) "" else "logo1.png",
+    logo_esquerda_arquivo = "logo1.png",
     logo_direita_arquivo = if (is.null(logo_direita)) "" else "logo2.png"
   )
 
@@ -169,6 +170,8 @@ criar_qmd_boletim <- function(
     origem <- normalizePath(origem, mustWork = TRUE)
     destino <- file.path(output_dir, nome)
     if (identical(origem, destino)) next
+    if (identical(nome, "logo1.png") && file.exists(destino) &&
+        identical(unname(tools::md5sum(origem)), unname(tools::md5sum(destino)))) next
     if (file.exists(destino) && !overwrite) stop("Logo de destino ja existe: ", destino, call. = FALSE)
     if (!file.copy(origem, file.path(stage, nome))) stop("Falha ao preparar logo: ", origem, call. = FALSE)
     arquivos[[destino]] <- file.path(stage, nome)
@@ -208,7 +211,7 @@ encontrar_template_boletim <- function() {
   template <- system.file(
     "templates",
     "boletim_municipal_completo.qmd",
-    package = "infodengesubmunicipal"
+    package = "infodengueintramunicipal"
   )
 
   if (nzchar(template) && file.exists(template)) {

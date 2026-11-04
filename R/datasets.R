@@ -28,7 +28,7 @@
 #' @source Arquivo sintetico `extdata/feira_livre/historico_alerta.csv`.
 #' @seealso [dados], [notificacoes_alerta], [referencia_intramunicipal]
 #' @examples
-#' data("historico_alerta", package = "infodengesubmunicipal")
+#' data("historico_alerta", package = "infodengueintramunicipal")
 #' head(historico_alerta)
 "historico_alerta"
 
@@ -50,7 +50,7 @@
 #' @source Arquivo sintetico `extdata/feira_livre/notificacoes.csv`.
 #' @seealso [dados], [historico_alerta], [referencia_intramunicipal]
 #' @examples
-#' data("notificacoes_alerta", package = "infodengesubmunicipal")
+#' data("notificacoes_alerta", package = "infodengueintramunicipal")
 #' head(notificacoes_alerta)
 "notificacoes_alerta"
 
@@ -69,7 +69,7 @@
 #' @source Shapefile sintetico `extdata/feira_livre/shape/feira_livre_bairros.shp`.
 #' @seealso [dados], [historico_alerta], [notificacoes_alerta]
 #' @examples
-#' data("referencia_intramunicipal", package = "infodengesubmunicipal")
+#' data("referencia_intramunicipal", package = "infodengueintramunicipal")
 #' sf::st_drop_geometry(referencia_intramunicipal)
 "referencia_intramunicipal"
 
@@ -87,7 +87,7 @@
 #' @source Dados sinteticos fornecidos pelo mantenedor, em `extdata/feira_livre`.
 #' @seealso [historico_alerta], [notificacoes_alerta], [referencia_intramunicipal]
 #' @examples
-#' data(dados, package = "infodengesubmunicipal")
+#' data(dados, package = "infodengueintramunicipal")
 #' names(dados)
 #' nrow(dados$notificacoes_alerta)
 "dados"

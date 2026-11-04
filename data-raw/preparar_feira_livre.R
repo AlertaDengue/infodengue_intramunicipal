@@ -1,7 +1,7 @@
 # Rscript data-raw/preparar_feira_livre.R /pasta/de/saida
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1L) stop("Informe uma pasta de saida.")
-base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+base <- system.file("extdata", "feira_livre", package = "infodengueintramunicipal")
 if (!nzchar(base)) base <- file.path("inst", "extdata", "feira_livre")
 dir.create(args[1], recursive = TRUE, showWarnings = FALSE)
 ref <- sf::st_read(file.path(base, "shape", "feira_livre_bairros.shp"),

@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(infodengesubmunicipal)
+library(infodengueintramunicipal)
 
-test_check("infodengesubmunicipal")
+test_check("infodengueintramunicipal")

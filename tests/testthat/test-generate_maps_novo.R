@@ -87,7 +87,7 @@ testthat::test_that("generate_maps_novo filtra pelo argumento arbo sem ambiguida
 })
 
  test_that("mapas aceitam CRS local sem transformar coordenadas", {
-  base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+  base <- system.file("extdata", "feira_livre", package = "infodengueintramunicipal")
   x <- sf::st_read(file.path(base, "shape", "feira_livre_bairros.shp"), quiet = TRUE)
   original <- sf::st_crs(x)
   x$sem_not <- 202637; x$arbo <- "dengue"; x$inc <- 1

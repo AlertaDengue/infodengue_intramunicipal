@@ -1,4 +1,4 @@
-#' infodengesubmunicipal: ferramentas para analise epidemiologica submunicipal
+#' infodengueintramunicipal: ferramentas para analise epidemiologica submunicipal
 #'
 #' Infraestrutura de namespace do pacote. Os imports centralizados aqui
 #' refletem o uso atual do codigo e reduzem erros de carregamento enquanto

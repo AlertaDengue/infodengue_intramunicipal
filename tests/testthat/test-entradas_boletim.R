@@ -1,5 +1,5 @@
 test_that("leitura preserva identificadores e historico sem estimativas", {
-  base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+  base <- system.file("extdata", "feira_livre", package = "infodengueintramunicipal")
   dados <- ler_tabela_local(file.path(base, "notificacoes.csv"))
   expect_equal(nrow(dados), 7210L)
   expect_type(dados$nu_notific, "character")
@@ -15,7 +15,7 @@ test_that("leitura preserva identificadores e historico sem estimativas", {
   expect_error(preparar_historico_alerta(separado), "duplicadas")
 })
 test_that("referencia sintetica tem geometria e populacao completas", {
-  base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+  base <- system.file("extdata", "feira_livre", package = "infodengueintramunicipal")
   ref <- sf::st_read(file.path(base, "shape", "feira_livre_bairros.shp"), options = "ENCODING=UTF-8", quiet = TRUE)
   path <- tempfile(fileext = ".rds"); saveRDS(ref, path)
   r <- preparar_referencia(path, "nm_bairro", "id_bairro", "nm_distr", "pop", attr(ref, "sf_column"))
