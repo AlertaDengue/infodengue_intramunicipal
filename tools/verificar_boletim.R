@@ -1,4 +1,4 @@
-# Rscript tools/verificar_boletim.R /pasta/de/saida [dengue|misto|chikungunya|vazio|logos|nowcasting] [gerar|validar|pdf]
+# Rscript tools/verificar_boletim.R /pasta/de/saida [dengue|misto|chikungunya|vazio|logos|nowcasting|clima-temperatura|clima-umidade|clima-combinado|clima-ausente] [gerar|validar|pdf]
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1L) stop("Informe uma pasta de saida.")
 scenario <- if (length(args) > 1L) args[2] else "dengue"
@@ -25,6 +25,21 @@ if (scenario %in% c("misto", "chikungunya", "chikon-historico")) {
   } else { notificacoes <- chik; historico <- hc }
 }
 if (scenario == "vazio") { notificacoes <- notificacoes[FALSE, ]; historico$casos <- 0; historico$p_inc100k <- 0 }
+# Parametros e umidade sinteticos: nao representam municipios reais.
+config_climatica <- list(modelo = "Af", colunas = list(temp_min = "tempmin"),
+                         limiares = list(temp_min = 18))
+if (scenario %in% c("clima-umidade", "clima-combinado", "clima-ausente")) {
+  historico$umidmax <- 70 + 10 * sin(seq_len(nrow(historico)) / 3)
+  if (scenario == "clima-umidade") {
+    historico$tempmin <- NULL
+    config_climatica <- list(modelo = "Aw", colunas = list(umid_max = "umidmax"),
+                             limiares = list(umid_max = 70))
+  } else {
+    config_climatica <- list(modelo = "AsAw", colunas = list(temp_min = "tempmin", umid_max = "umidmax"),
+                             limiares = list(temp_min = 18, umid_max = 70))
+  }
+  if (scenario == "clima-ausente") historico$umidmax[historico$SE == 202636] <- NA_real_
+}
 saveRDS(notificacoes, file.path(saida, "notificacoes.rds"))
 saveRDS(historico, file.path(saida, "historico.rds"))
 logo <- NULL
@@ -42,7 +57,7 @@ qmd <- criar_qmd_boletim(
   col_distrito_ref = "nm_distr", col_pop_ref = "pop", col_geometry_ref = attr(ref, "sf_column"),
   # Valores exclusivamente demonstrativos; nao sao limiares municipais estimados por MEM.
   limiar_preseason = 5, limiar_epidemico = 50, limiar_posseason = 10,
-  logo_direita = logo, overwrite = TRUE,
+  logo_direita = logo, overwrite = TRUE, config_climatica = config_climatica,
   executar_nowcasting = identical(scenario, "nowcasting"), render = identical(acao, "pdf")
 )
 cat(qmd, "\n")
@@ -59,6 +74,18 @@ if (identical(acao, "validar")) {
               identical(as.integer(e$weeks_2_plot), if (scenario == "ano-2025") c(202551L, 202552L, 202553L) else c(202635L, 202636L, 202637L)),
               sum(e$perda_notificação$notificações_bruto) == nrow(e$df_mun),
               sum(e$perda_notificação$perca) + nrow(e$df_mun_ok) == nrow(e$df_mun))
+    # Os niveis e o indicador municipais nao sao recalculados.
+    original <- historico[order(historico$arbo, historico$SE), ]
+    stopifnot(identical(e$dados_api$nivel, original$nivel),
+              identical(e$dados_api$receptivo, original$receptivo),
+              isTRUE(all.equal(e$config_climatica, config_climatica)))
+    climaticas <- names(config_climatica$limiares)
+    stopifnot(all(climaticas %in% names(e$df_distritos)))
+    if (scenario == "clima-ausente") {
+      stopifnot(all(is.na(e$df_distritos$nivel[e$df_distritos$sem_not == 202636])),
+                all(is.na(e$dados_api$clima_favoravel[e$dados_api$SE == 202636])))
+    }
+    if (scenario == "clima-umidade") stopifnot(!"tempmin" %in% names(e$dados_api))
     if (scenario == "nowcasting") {
       stopifnot(e$tem_nowcast, length(e$estados_nowcasting) == 5L,
                 all(unlist(e$estados_nowcasting) == "ajustado"),

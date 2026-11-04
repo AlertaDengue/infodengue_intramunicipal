@@ -126,20 +126,28 @@ preparar_referencia <- function(path, col_bairro, col_bairro_id, col_distrito,
 #' Preparar historico municipal de alerta
 #' @param path_unico Arquivo unico com coluna arbo.
 #' @param path_dengue,path_chikungunya Arquivos separados opcionais por agravo.
-#' @return Tabela ordenada. casos_est e receptivo ausentes recebem NA, nunca casos observados.
+#' @param config_climatica Configuracao com modelo, colunas e limiares; consulte
+#'   [criar_qmd_boletim()]. NULL usa Af/tempmin/18 com aviso.
+#' @return Tabela ordenada. Indicadores municipais sao preservados; adiciona
+#'   colunas climaticas canonicas e clima_favoravel (NA se faltar clima).
+#'   Atributos config_climatica, parametros_climaticos e criterio_climatico
+#'   registram a configuracao validada. casos_est e receptivo ausentes recebem NA.
 #' @export
-preparar_historico_alerta <- function(path_unico = "", path_dengue = "", path_chikungunya = "") {
-  obrigatorias <- c("SE", "casos", "p_inc100k", "nivel", "Rt", "tempmin")
+preparar_historico_alerta <- function(path_unico = "", path_dengue = "", path_chikungunya = "",
+                                      config_climatica = NULL) {
+  cfg <- normalizar_config_climatica(config_climatica)
+  obrigatorias <- c("SE", "casos", "p_inc100k", "nivel", "Rt")
+  climaticas <- unlist(cfg$colunas, use.names = FALSE)
   if (arquivo_informado(path_unico)) {
     historico <- ler_tabela_local(path_unico, "historico_alerta")
-    validar_colunas(historico, c(obrigatorias, "arbo"), "historico_alerta")
+    validar_colunas(historico, c(obrigatorias, climaticas, "arbo"), "historico_alerta")
   } else {
     entradas <- list(dengue = path_dengue, chikon = path_chikungunya)
     entradas <- entradas[vapply(entradas, arquivo_informado, logical(1))]
     if (!length(entradas)) stop("Informe ao menos um historico de alerta.", call. = FALSE)
     historico <- dplyr::bind_rows(lapply(names(entradas), function(arbo) {
       x <- ler_tabela_local(entradas[[arbo]], paste0("historico_", arbo))
-      validar_colunas(x, obrigatorias, paste0("historico_", arbo))
+      validar_colunas(x, c(obrigatorias, climaticas), paste0("historico_", arbo))
       x$arbo <- arbo
       x
     }))
@@ -161,7 +169,12 @@ preparar_historico_alerta <- function(path_unico = "", path_dengue = "", path_ch
   }
   if (anyDuplicated(historico[c("arbo", "SE")])) stop("Historico possui semanas duplicadas por agravo.", call. = FALSE)
   for (col in c("casos_est", "receptivo")) if (!col %in% names(historico)) historico[[col]] <- NA_real_
-  dplyr::arrange(historico, .data$arbo, .data$SE)
+  historico <- preparar_colunas_climaticas(historico, cfg)
+  historico <- dplyr::arrange(historico, .data$arbo, .data$SE)
+  attr(historico, "config_climatica") <- cfg
+  attr(historico, "parametros_climaticos") <- parametros_climaticos_alerta(cfg)
+  attr(historico, "criterio_climatico") <- descrever_config_climatica(cfg)
+  historico
 }
 
 normalizar_arbo <- function(x) {

@@ -244,19 +244,19 @@ criar_grafico_receptividade <- function(dados_api, semana_limite) {
 #' @param coluna_semana Nome da coluna de semana epidemiologica.
 #' @param coluna_temperatura Nome da coluna de temperatura minima.
 #'
+#' @param config_climatica Configuracao municipal; consulte [criar_qmd_boletim()].
 #' @return Objeto `ggplot`.
 #' @export
 criar_grafico_receptividade_novo <- function(dados_api, semana_limite,
                                              quebras_1ano,
                                              limiar_temperatura = 18,
                                              coluna_semana = "SE",
-                                             coluna_temperatura = "tempmin") {
-  create_receptivity_plot_novo(
-    api_data = dados_api,
-    weeks_limit = semana_limite,
-    breaks_1ano = quebras_1ano,
-    limiar_temp = limiar_temperatura,
-    se_col = coluna_semana,
-    temp_col = coluna_temperatura
-  )
+                                             coluna_temperatura = "tempmin",
+                                             config_climatica = NULL) {
+  argumentos <- list(api_data = dados_api, weeks_limit = semana_limite,
+                     breaks_1ano = quebras_1ano, se_col = coluna_semana,
+                     config_climatica = config_climatica)
+  if (!missing(limiar_temperatura)) argumentos$limiar_temp <- limiar_temperatura
+  if (!missing(coluna_temperatura)) argumentos$temp_col <- coluna_temperatura
+  do.call(create_receptivity_plot_novo, argumentos)
 }

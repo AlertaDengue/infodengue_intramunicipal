@@ -32,7 +32,8 @@ criar_qmd_boletim(
   logo_direita = NULL,
   overwrite = FALSE,
   render = FALSE,
-  executar_nowcasting = FALSE
+  executar_nowcasting = FALSE,
+  config_climatica = NULL
 )
 }
 \arguments{
@@ -95,6 +96,11 @@ pacote e sempre copiado como \code{logo1.png} para o cabecalho esquerdo.}
 \item{render}{Se \code{TRUE}, renderiza o QMD apos cria-lo.}
 
 \item{executar_nowcasting}{Se TRUE, solicita ajuste opcional de nowcasting.}
+
+\item{config_climatica}{Lista com \code{modelo} (Af, Aw, Awi, AsAw ou AsAwi),
+\code{colunas} e \code{limiares}. As duas ultimas listas devem ser nomeadas com
+temp_min, umid_max e/ou umid_min, conforme o modelo. Informe os parametros
+oficiais do municipio. NULL usa Af/tempmin/18 com aviso de compatibilidade.}
 }
 \value{
 Caminho normalizado do arquivo QMD criado, invisivelmente.

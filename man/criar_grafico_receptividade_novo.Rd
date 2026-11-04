@@ -10,7 +10,8 @@ criar_grafico_receptividade_novo(
   quebras_1ano,
   limiar_temperatura = 18,
   coluna_semana = "SE",
-  coluna_temperatura = "tempmin"
+  coluna_temperatura = "tempmin",
+  config_climatica = NULL
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ criar_grafico_receptividade_novo(
 \item{coluna_semana}{Nome da coluna de semana epidemiologica.}
 
 \item{coluna_temperatura}{Nome da coluna de temperatura minima.}
+
+\item{config_climatica}{Configuracao municipal; consulte \code{\link[=criar_qmd_boletim]{criar_qmd_boletim()}}.}
 }
 \value{
 Objeto \code{ggplot}.

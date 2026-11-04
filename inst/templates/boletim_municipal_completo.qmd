@@ -50,6 +50,8 @@ params:
   uf: "{{uf}}"
   municipio_geocodigo: {{municipio_geocodigo}}
   executar_nowcasting: {{executar_nowcasting}}
+  config_climatica: "{{config_climatica}}"
+  clima_legado: {{clima_legado}}
   ano: {{ano}}
   populacao: {{populacao}}
   notificacoes_path: "{{notificacoes_path}}"
@@ -247,26 +249,22 @@ limiar_preseason <- params$limiar_preseason
 limiar_epidemico <- params$limiar_epidemico
 limiar_posseason <- params$limiar_posseason
 
-params_modelo <- data.frame(
-  municipio_geocodigo = cfg$municipio_geocodigo,
-  limiar_preseason = limiar_preseason,
-  limiar_posseason = limiar_posseason,
-  limiar_epidemico = limiar_epidemico,
-  varcli = "temp_min",
-  clicrit = 18,
-  cid10 = "A90",
-  codmodelo = "Af",
-  varcli2 = NA,
-  clicrit2 = NA,
-  codigo_estacao_wu = NA,
-  estacao_wu_sec = NA
-)
-
-# Historico de alerta municipal
+# A configuracao registrada no QMD e a mesma usada no grafico e no alerta.
+config_climatica <- jsonlite::fromJSON(params$config_climatica, simplifyVector = FALSE)
 dados_api <- preparar_historico_alerta(
   path_unico = params$historico_alerta_path,
   path_dengue = params$historico_alerta_dengue_path,
-  path_chikungunya = params$historico_alerta_chikungunya_path
+  path_chikungunya = params$historico_alerta_chikungunya_path,
+  config_climatica = config_climatica
+)
+config_climatica <- attr(dados_api, "config_climatica")
+criterio_climatico <- attr(dados_api, "criterio_climatico")
+params_modelo <- c(
+  list(municipio_geocodigo = cfg$municipio_geocodigo,
+       limiar_preseason = limiar_preseason, limiar_posseason = limiar_posseason,
+       limiar_epidemico = limiar_epidemico, cid10 = "A90",
+       codigo_estacao_wu = NA, estacao_wu_sec = NA),
+  attr(dados_api, "parametros_climaticos")
 )
 
 # Notificacoes
@@ -389,7 +387,7 @@ df_distritos <- df_bairros %>%
   group_by(distrito, sem_not, arbo) %>%
   summarise(casos = sum(notificações, na.rm = TRUE), .groups = "drop") %>%
   left_join(pop_distritos, by = "distrito") %>%
-  left_join(dados_api %>% select(SE, arbo, temp_min = tempmin),
+  left_join(dados_api %>% select(SE, arbo, all_of(names(config_climatica$colunas)), clima_favoravel),
             by = c("sem_not" = "SE", "arbo")) %>%
   mutate(
     inc = casos / pop * 1e5,
@@ -551,7 +549,8 @@ rf_inc_mun_chikon <- if (tem_chikon) {
 rf_receptividade_climatica <- create_receptivity_plot_novo(
   api_data = dados_api %>% filter(arbo == arbo_principal),
   weeks_limit = semana_atual,
-  breaks_1ano = breaks_1ano
+  breaks_1ano = breaks_1ano,
+  config_climatica = config_climatica
 )
 
 # @fig-comparacao - comparacao com anos anteriores
@@ -923,9 +922,17 @@ painel_agravos(rf_inc_mun_dengon, rf_inc_mun_chikon)
 
 ## Perfil sazonal da receptividade climática
 
-O perfil sazonal da receptividade climática (@fig-clima) indica os períodos do ano com condições favoráveis à transmissão das arboviroses, associados a temperaturas mínimas acima de 18 °C.
+O perfil sazonal das condições climáticas (@fig-clima) usa o modelo `r config_climatica$modelo`: `r criterio_climatico`. Nos modelos com duas variáveis, ambas devem superar seus limiares na mesma semana. A igualdade ao limiar é desfavorável. Sem informação de qualquer variável necessária, a condição fica indisponível.
 
-```{r fig-clima, fig.cap=paste0("Receptividade climática e temperatura mínima no município até a SE", week_atual, ". A linha amarela mostra a temperatura mínima; a área azul indica as semanas com receptividade climática favorável à transmissão e a área cinza, as semanas abaixo do limiar."), fig.width=7, fig.height=4}
+O gráfico descreve somente a condição climática; o indicador de alerta também considera presença de casos e persistência temporal. Os parâmetros municipais são aplicados aos agrupamentos como configuração do boletim, sem representar calibração específica para cada agrupamento.
+
+```{r aviso_clima_legado, results="asis"}
+if (isTRUE(params$clima_legado)) {
+  cat("**Configuração climática de compatibilidade:** temperatura mínima e 18 °C foram usados por ausência de configuração explícita. Confirme os parâmetros oficiais do município.\n\n")
+}
+```
+
+```{r fig-clima, fig.cap=paste0("Condições climáticas até a SE ", week_atual, ". Modelo ", config_climatica$modelo, ": ", criterio_climatico, ". Azul: condição conjunta favorável; cinza: desfavorável; amarelo-claro: indisponível. Linhas tracejadas indicam os limiares."), fig.width=7, fig.height=if (length(config_climatica$colunas) > 1L) 6 else 4}
 rf_receptividade_climatica
 ```
 
@@ -991,7 +998,7 @@ if (tem_nowcast) {
 }
 ```
 
--   A análise de receptividade é feita com base em dados de temperatura do Copernicus ERA5;
+-   A condição climática é calculada a partir das variáveis do histórico local e da configuração municipal registrada neste boletim. Semanas sem dados climáticos têm nível e receptividade submunicipais indisponíveis; a persistência do alerta reinicia após essas lacunas, sem repetir o clima anterior;
 
 -   Os perfis sazonais de receptividade ambiental e de transmissão são calculados com base na série histórica disponível. O nível de alerta combina os indicadores disponíveis com os critérios e limiares configurados para o boletim;
 

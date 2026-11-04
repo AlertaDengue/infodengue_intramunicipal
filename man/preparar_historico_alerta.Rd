@@ -7,16 +7,23 @@
 preparar_historico_alerta(
   path_unico = "",
   path_dengue = "",
-  path_chikungunya = ""
+  path_chikungunya = "",
+  config_climatica = NULL
 )
 }
 \arguments{
 \item{path_unico}{Arquivo unico com coluna arbo.}
 
 \item{path_dengue, path_chikungunya}{Arquivos separados opcionais por agravo.}
+
+\item{config_climatica}{Configuracao com modelo, colunas e limiares; consulte
+\code{\link[=criar_qmd_boletim]{criar_qmd_boletim()}}. NULL usa Af/tempmin/18 com aviso.}
 }
 \value{
-Tabela ordenada. casos_est e receptivo ausentes recebem NA, nunca casos observados.
+Tabela ordenada. Indicadores municipais sao preservados; adiciona
+colunas climaticas canonicas e clima_favoravel (NA se faltar clima).
+Atributos config_climatica, parametros_climaticos e criterio_climatico
+registram a configuracao validada. casos_est e receptivo ausentes recebem NA.
 }
 \description{
 Preparar historico municipal de alerta

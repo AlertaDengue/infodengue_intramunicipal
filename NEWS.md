@@ -1,3 +1,11 @@
+# infodengueintramunicipal (desenvolvimento)
+
+- Adiciona config_climatica para cinco modelos do AlertTools, com variáveis e limiares municipais explícitos.
+- Histórico aceita modelos somente de umidade e preserva indicadores municipais; valida colunas e valores climáticos.
+- Gráfico usa condição conjunta, comparação estrita e painéis por variável; distingue semanas sem dados.
+- Alertas submunicipais ficam indisponíveis em lacunas climáticas e reiniciam a persistência após elas, sem imputação do clima anterior.
+- Mantém configuração legada Af/tempmin/18 com aviso e nota visível; registra configuração no QMD e documenta migração.
+
 # infodengueintramunicipal 0.1.1
 
 - Renomeia o pacote para infodengueintramunicipal (nomes R não aceitam sublinhados).
