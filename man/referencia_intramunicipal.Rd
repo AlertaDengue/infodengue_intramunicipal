@@ -25,7 +25,7 @@ local do shapefile; nao atribua um EPSG geografico ficticio.
 A populacao espacial soma 249990, enquanto o historico usa denominador 250000.
 }
 \examples{
-data("referencia_intramunicipal", package = "infodengesubmunicipal")
+data("referencia_intramunicipal", package = "infodengueintramunicipal")
 sf::st_drop_geometry(referencia_intramunicipal)
 }
 \seealso{

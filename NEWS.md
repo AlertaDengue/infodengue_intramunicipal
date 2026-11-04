@@ -1,4 +1,11 @@
-# infodengesubmunicipal 0.1.0
+# infodengueintramunicipal 0.1.1
+
+- Renomeia o pacote para infodengueintramunicipal (nomes R não aceitam sublinhados).
+- Inclui o logo oficial do InfoDengue sempre à esquerda; somente logo_direita é configurável.
+- Usa nowcasting_mgcv() do nowcaster >= 1.0.1, sem necessidade de INLA, e documenta a instalação pelo GitHub.
+- Simplifica a chamada do gerador no README e documenta a migração.
+
+# infodengueintramunicipal 0.1.0
 
 * Integra gerador v2 e novo boletim municipal, com dados sintéticos de Feira Livre.
 * Corrige nomes acentuados em locale C e preserva a SE 53 nas funções de completude.

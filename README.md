@@ -1,4 +1,4 @@
-# infodengesubmunicipal
+# infodengueintramunicipal
 
 Pacote R para preparar dados locais e gerar boletins municipais de arboviroses
 com análises submunicipais, gráficos, mapas e tabelas em PDF.
@@ -11,11 +11,11 @@ produz uma saída informativa.
 ```r
 install.packages("remotes")
 remotes::install_github("AlertaDengue/infodengue_intramunicipal")
-library(infodengesubmunicipal)
+library(infodengueintramunicipal)
 ```
 
-O nome do repositório é `infodengue_intramunicipal`; o nome do pacote R é
-`infodengesubmunicipal`. O instalador `remotes` resolve também o remoto
+O pacote usa a grafia `infodengueintramunicipal`, pois nomes de pacotes R
+não permitem sublinhados. O instalador `remotes` resolve também o remoto
 `AlertaDengue/AlertTools` declarado no pacote. Para instalar um arquivo fonte
 local, prepare as dependências antes de usar `install.packages(..., repos = NULL)`.
 
@@ -27,10 +27,16 @@ quarto install tinytex
 ```
 
 Os templates verificam as dependências R e não instalam pacotes durante a
-renderização. `arrow` é opcional para arquivos Parquet. `nowcaster` e seu ambiente
-INLA são necessários somente para solicitar nowcasting; consulte as instruções
-específicas desses pacotes antes de habilitá-lo. `Suggests` não é instalado
-obrigatoriamente junto com o pacote.
+renderização. `arrow` é opcional para arquivos Parquet. Para habilitar
+`executar_nowcasting = TRUE`, instale a versão mais recente do `nowcaster`
+diretamente do GitHub, que inclui o modelo `nowcasting_mgcv()` (sem INLA):
+
+```r
+remotes::install_github("covid19br/nowcaster", dependencies = NA, upgrade = "never")
+```
+
+`Suggests` não é instalado obrigatoriamente junto com o pacote. O comando acima
+instala as dependências obrigatórias do nowcaster, sem solicitar o INLA opcional.
 
 ## Dados de entrada
 
@@ -112,31 +118,30 @@ demonstrativos; não são parâmetros estimados para um município real.
 As tres bases tambem sao dados nativos do pacote, acessiveis diretamente:
 
 ```r
-library(infodengesubmunicipal)
-infodengesubmunicipal::historico_alerta
-infodengesubmunicipal::notificacoes_alerta
-infodengesubmunicipal::referencia_intramunicipal
+library(infodengueintramunicipal)
+infodengueintramunicipal::historico_alerta
+infodengueintramunicipal::notificacoes_alerta
+infodengueintramunicipal::referencia_intramunicipal
 
 # Carregamento individual com data()
-data("historico_alerta", package = "infodengesubmunicipal")
-data("notificacoes_alerta", package = "infodengesubmunicipal")
-data("referencia_intramunicipal", package = "infodengesubmunicipal")
+data("historico_alerta", package = "infodengueintramunicipal")
+data("notificacoes_alerta", package = "infodengueintramunicipal")
+data("referencia_intramunicipal", package = "infodengueintramunicipal")
 
 # Ou as tres bases reunidas em uma lista
-data(dados, package = "infodengesubmunicipal")
+data(dados, package = "infodengueintramunicipal")
 names(dados)
 notificacoes <- dados$notificacoes_alerta
 ```
 
-O nome do pacote e `infodengesubmunicipal`; `infodengue_intramunicipal` e o
-nome do repositorio. A grafia do objeto de notificacoes e `notificacoes_alerta`.
+A grafia do objeto de notificacoes e `notificacoes_alerta`.
 As tabelas preservam identificadores textuais e datas; a referencia e um objeto
 `sf` com o CRS local original. Os arquivos em `extdata` continuam disponiveis
 para o gerador de boletins, que recebe caminhos:
 
 ```r
-library(infodengesubmunicipal)
-base <- system.file("extdata", "feira_livre", package = "infodengesubmunicipal")
+library(infodengueintramunicipal)
+base <- system.file("extdata", "feira_livre", package = "infodengueintramunicipal")
 saida <- file.path(tempdir(), "feira_livre")
 dir.create(saida, recursive = TRUE, showWarnings = FALSE)
 
@@ -147,7 +152,7 @@ ref <- sf::st_read(
 referencia <- file.path(saida, "referencia.rds")
 saveRDS(ref, referencia)
 
-qmd <- criar_qmd_boletim(
+criar_qmd_boletim(
   municipio_nome = "Feira Livre", uf = "XX", municipio_geocodigo = 999999,
   ano = 2026, populacao = 250000,
   output_qmd = file.path(saida, "boletim.qmd"),
@@ -192,9 +197,10 @@ conservadas na grade; 289 não são alocadas.
 
 ## Logos, limiares e métodos
 
-`logo_esquerda` e `logo_direita` são opcionais. Quando informados, devem apontar
-para imagens PNG válidas; serão copiadas como `logo1.png` e `logo2.png` ao lado
-do QMD. Sem argumentos, o cabeçalho não usa logos antigos que estejam na pasta.
+O logo oficial do InfoDengue vem incluído no pacote e aparece sempre à esquerda
+do cabeçalho, copiado como `logo1.png` ao lado do QMD. Somente `logo_direita`
+é configurável: informe uma imagem PNG válida, copiada como `logo2.png`.
+Sem esse argumento, o lado direito fica vazio, mesmo que haja um logo antigo na pasta.
 `overwrite = TRUE` permite substituir os arquivos gerados. A função protege os
 arquivos existentes antes de gravar; não basta renomear JPG/PDF para PNG.
 
@@ -208,9 +214,16 @@ O nowcasting vem desabilitado por padrão. Se solicitado, o boletim identifica
 por unidade os estados desabilitado, indisponível, sem dados, ajustado ou falha.
 Falhas não são tratadas como ajustes bem-sucedidos. A curva apresenta o ajuste
 quando disponível; a tabela municipal usa `casos_est` do histórico. O pacote
-não instala `nowcaster` ou INLA durante a renderização.
+usa `nowcaster::nowcasting_mgcv()` e não precisa do INLA. Dependências não são
+instaladas durante a renderização. A janela máxima de atraso é de 15 semanas,
+conforme o padrão do nowcaster para esse modelo.
 
 ## API e migração
+
+O pacote foi renomeado de `infodengesubmunicipal` para `infodengueintramunicipal`.
+Após reinstalar, atualize `library()`, chamadas `::` e `package =` nos seus
+scripts e gere novamente os boletins. O argumento `logo_esquerda` foi removido:
+o logo do InfoDengue agora é fixo e somente `logo_direita` deve ser informado.
 
 As funções de entrada agora pertencem ao pacote: `ler_tabela_local()`,
 `validar_colunas()`, `preparar_referencia()` e `preparar_historico_alerta()`.

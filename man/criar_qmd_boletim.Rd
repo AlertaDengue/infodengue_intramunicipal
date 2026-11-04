@@ -29,7 +29,6 @@ criar_qmd_boletim(
   nome_agregacao = "distrito",
   nome_agregacao_plural = "distritos",
   limiar_completude = 70,
-  logo_esquerda = NULL,
   logo_direita = NULL,
   overwrite = FALSE,
   render = FALSE,
@@ -87,9 +86,9 @@ textos (ex.: \code{"distrito"}, \code{"distritos"}; \code{"região administrativ
 \item{limiar_completude}{Completude minima recomendada (\%) das variaveis de
 localizacao, mostrada no grafico de completude.}
 
-\item{logo_esquerda, logo_direita}{Caminhos opcionais para as imagens do
-cabecalho. Sao copiadas para a pasta do \code{.qmd} como \code{logo1.png} e
-\code{logo2.png}. Sem elas, o cabecalho e gerado sem logos.}
+\item{logo_direita}{Caminho opcional para imagem PNG do cabecalho direito,
+copiada como \code{logo2.png}. O logo oficial do InfoDengue e incluido pelo
+pacote e sempre copiado como \code{logo1.png} para o cabecalho esquerdo.}
 
 \item{overwrite}{Se \code{TRUE}, sobrescreve \code{output_qmd} quando ele ja existe.}
 

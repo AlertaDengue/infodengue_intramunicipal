@@ -28,7 +28,7 @@ Historico semanal do municipio ficticio 999999, para exemplos e testes.
 Os valores originais sao preservados; nao ha estimativas \code{casos_est}.
 }
 \examples{
-data("historico_alerta", package = "infodengesubmunicipal")
+data("historico_alerta", package = "infodengueintramunicipal")
 head(historico_alerta)
 }
 \seealso{

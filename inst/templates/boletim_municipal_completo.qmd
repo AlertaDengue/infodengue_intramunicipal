@@ -91,7 +91,7 @@ knitr::opts_chunk$set(
 # o boletim para com a lista do que precisa ser instalado.
 pacotes <- c("dplyr", "tidyr", "stringr", "purrr", "tibble", "readr", "lubridate",
              "ggplot2", "ggpubr", "cowplot", "sf", "fuzzyjoin", "kableExtra",
-             "assertthat", "AlertTools", "infodengesubmunicipal")
+             "assertthat", "AlertTools", "infodengueintramunicipal")
 # assertthat precisa estar carregado: o AlertTools usa assert_that() sem declarar a dependencia
 faltam <- pacotes[!vapply(pacotes, requireNamespace, logical(1), quietly = TRUE)]
 if (length(faltam) > 0) {
@@ -100,8 +100,12 @@ if (length(faltam) > 0) {
 }
 invisible(lapply(pacotes, library, character.only = TRUE))
 
-# Nowcasting: opcional (depende do pacote nowcaster e do INLA)
-tem_nowcaster <- requireNamespace("nowcaster", quietly = TRUE)
+# Nowcasting opcional com o modelo mgcv, sem necessidade de INLA.
+tem_nowcaster <- requireNamespace("nowcaster", quietly = TRUE) &&
+  "nowcasting_mgcv" %in% getNamespaceExports("nowcaster")
+if (isTRUE(params$executar_nowcasting) && !tem_nowcaster) {
+  warning('Instale o nowcaster mais recente: remotes::install_github("covid19br/nowcaster")', call. = FALSE)
+}
 ```
 
 ```{r funcoes, include=FALSE}
@@ -152,7 +156,7 @@ nowcasting_opcional <- function(dados, K, Dmax, unidade = "municipio") {
     return(NULL)
   }
   tryCatch({
-    resultado <- nowcaster::nowcasting_inla(dataset = dados, data.by.week = TRUE,
+    resultado <- nowcaster::nowcasting_mgcv(dataset = dados, data.by.week = TRUE,
                                           date_onset = dt_sin_pri, date_report = dt_digita, K = K, Dmax = Dmax)
     estados_nowcasting[[unidade]] <<- "ajustado"
     resultado
@@ -437,7 +441,9 @@ df_distritos <- bind_rows(
 ```
 
 ```{r nowcasting, include=FALSE}
-# Nowcasting municipal e por agrupamento (opcional)
+# Nowcasting municipal e por agrupamento (opcional).
+# Dmax = 15 e o padrao do nowcaster: fornece niveis de atraso suficientes
+# para a base de suavizacao do modelo mgcv (as antigas janelas 5/7 falham).
 dados_nowcast <- df_mun %>%
   filter(arbo == "dengue", lubridate::epiyear(dt_sin_pri) >= ano_atual - 2) %>%
   filter(!is.na(dt_sin_pri))
@@ -446,7 +452,7 @@ niveis_mun <- dados_api %>%
   filter(arbo == "dengue") %>%
   select(ano_epi = SE, nivel)
 
-mun_nowcast <- formatar_nowcast(nowcasting_opcional(dados_nowcast, K = 1, Dmax = 5), semana_atual)
+mun_nowcast <- formatar_nowcast(nowcasting_opcional(dados_nowcast, K = 1, Dmax = 15), semana_atual)
 mun_observados <- observados_por_semana(dados_nowcast, niveis_mun, ano_atual - 1)
 tem_nowcast <- nrow(mun_nowcast) > 0
 
@@ -459,7 +465,7 @@ distritos_nowcast <- purrr::map(nomes_distritos, function(d) {
     filter(arbo == "dengue", distrito == d) %>%
     select(ano_epi = sem_not, nivel)
   list(
-    nowcast = formatar_nowcast(nowcasting_opcional(dados_d, K = 2, Dmax = 7, unidade = d), semana_atual),
+    nowcast = formatar_nowcast(nowcasting_opcional(dados_d, K = 2, Dmax = 15, unidade = d), semana_atual),
     observado = observados_por_semana(dados_d, niveis_d, ano_atual - 1)
   )
 }) %>% setNames(nomes_distritos)
@@ -942,11 +948,11 @@ rt_mun
 # Situação das arboviroses por `r agr`
 
 ```{r secao_dengue, results="asis", eval=tem_dengue}
-cat(knitr::knit_child(system.file("templates", "sections", "dengue.qmd", package = "infodengesubmunicipal"), quiet = TRUE), sep = "\n")
+cat(knitr::knit_child(system.file("templates", "sections", "dengue.qmd", package = "infodengueintramunicipal"), quiet = TRUE), sep = "\n")
 ```
 
 ```{r secao_chikungunya, results="asis", eval=tem_chikon}
-cat(knitr::knit_child(system.file("templates", "sections", "chikungunya.qmd", package = "infodengesubmunicipal"), quiet = TRUE), sep = "\n")
+cat(knitr::knit_child(system.file("templates", "sections", "chikungunya.qmd", package = "infodengueintramunicipal"), quiet = TRUE), sep = "\n")
 ```
 
 ## Número reprodutivo por `r agr`

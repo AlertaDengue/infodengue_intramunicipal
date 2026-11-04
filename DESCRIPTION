@@ -1,6 +1,6 @@
-Package: infodengesubmunicipal
+Package: infodengueintramunicipal
 Title: Ferramentas para Analise Epidemiologica Submunicipal
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     person(
       given = "Quemuel",
@@ -48,7 +48,7 @@ Imports:
 Suggests: 
     arrow,
     mockery,
-    nowcaster,
+    nowcaster (>= 1.0.1),
     quarto,
     testthat (>= 3.0.0),
     yaml,
@@ -56,6 +56,7 @@ Suggests:
 Config/testthat/edition: 3
 Depends: 
     R (>= 4.1)
-Remotes: AlertaDengue/AlertTools
+Remotes: AlertaDengue/AlertTools,
+    covid19br/nowcaster
 LazyData: true
 LazyDataCompression: xz

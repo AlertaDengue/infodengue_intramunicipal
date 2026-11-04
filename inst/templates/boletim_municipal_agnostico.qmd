@@ -39,12 +39,12 @@ knitr::opts_chunk$set(
 # Verifique dependencias antes de processar; nunca instale ao renderizar.
 pacotes <- c("dplyr", "tidyr", "stringr", "purrr", "tibble", "readr", "sf",
              "lubridate", "ggplot2", "ggpubr", "cowplot", "gt", "kableExtra",
-             "fuzzyjoin", "AlertTools", "assertthat", "infodengesubmunicipal")
+             "fuzzyjoin", "AlertTools", "assertthat", "infodengueintramunicipal")
 faltam <- pacotes[!vapply(pacotes, requireNamespace, logical(1), quietly = TRUE)]
 if (length(faltam)) stop("Instale antes de renderizar: ", paste(faltam, collapse = ", "), call. = FALSE)
 invisible(lapply(pacotes, library, character.only = TRUE))
 
-library(infodengesubmunicipal)
+library(infodengueintramunicipal)
 ```
 
 ```{r funcoes, include=FALSE}
@@ -125,7 +125,7 @@ weeks_2_plot <- tail(sort(unique(as.numeric(df_mun$sem_not))), 3)
 week_atual <- as.numeric(substr(weeks_2_plot[length(weeks_2_plot)], 5, 6))
 ano_atual <- as.numeric(substr(weeks_2_plot[length(weeks_2_plot)], 1, 4))
 ultimas_3_semanas <- paste0("SE", sprintf("%02d", as.numeric(substr(weeks_2_plot, 5, 6))))
-breaks_1ano <- infodengesubmunicipal::criar_breaks_1ano(
+breaks_1ano <- infodengueintramunicipal::criar_breaks_1ano(
   ano_fim = ano_atual,
   semana_fim = week_atual
 )
@@ -134,7 +134,7 @@ breaks_anual <- sprintf("%02d", seq(1, 52))
 
 ```{r processar_dados, include=FALSE}
 df_mun_filtrado <- df_mun %>%
-  mutate(nm_bairro_norm = infodengesubmunicipal::normalizar_bairro(.data$nm_bairro)) %>%
+  mutate(nm_bairro_norm = infodengueintramunicipal::normalizar_bairro(.data$nm_bairro)) %>%
   filter(!is.na(.data$nm_bairro_norm))
 
 df_mun_ok <- fuzzyjoin::stringdist_inner_join(
