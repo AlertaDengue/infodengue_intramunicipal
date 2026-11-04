@@ -2,7 +2,7 @@
 % Please edit documentation in R/create_receptivity_plot_novo.R
 \name{create_receptivity_plot_novo}
 \alias{create_receptivity_plot_novo}
-\title{Criar grafico de receptividade sem depender de globais}
+\title{Criar grafico de condicoes climaticas municipais}
 \usage{
 create_receptivity_plot_novo(
   api_data,
@@ -10,26 +10,31 @@ create_receptivity_plot_novo(
   breaks_1ano,
   limiar_temp = 18,
   se_col = "SE",
-  temp_col = "tempmin"
+  temp_col = "tempmin",
+  config_climatica = NULL
 )
 }
 \arguments{
-\item{api_data}{Data frame com colunas de semana e temperatura minima.}
+\item{api_data}{Data frame com uma linha por semana e variaveis climaticas.}
 
 \item{weeks_limit}{Ultima semana epidemiologica considerada.}
 
 \item{breaks_1ano}{Vetor com os breaks do eixo X.}
 
-\item{limiar_temp}{Limiar de temperatura favoravel.}
+\item{limiar_temp}{Limiar legado de temperatura; nao combinar com config_climatica.}
 
 \item{se_col}{Nome da coluna da semana epidemiologica.}
 
-\item{temp_col}{Nome da coluna de temperatura minima.}
+\item{temp_col}{Coluna legada de temperatura; nao combinar com config_climatica.}
+
+\item{config_climatica}{Configuracao com modelo, colunas e limiares; consulte
+\code{\link[=criar_qmd_boletim]{criar_qmd_boletim()}}. NULL usa temperatura com aviso de compatibilidade.}
 }
 \value{
-Objeto \code{ggplot}.
+Objeto \code{ggplot}, com paineis separados por variavel. Semanas sem
+informacao ficam indisponiveis. Mostra as ultimas 53 semanas consecutivas.
 }
 \description{
-Refatora \code{create_receptivity_plot()} para usar explicitamente a semana limite
-e os breaks do eixo X.
+Usa a configuracao municipal e comparacoes estritas (>) como o AlertTools.
+A condicao climatica nao inclui casos nem persistencia do nivel de alerta.
 }

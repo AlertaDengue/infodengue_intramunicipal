@@ -37,6 +37,10 @@
 #' @param logo_direita Caminho opcional para imagem PNG do cabecalho direito,
 #'   copiada como `logo2.png`. O logo oficial do InfoDengue e incluido pelo
 #'   pacote e sempre copiado como `logo1.png` para o cabecalho esquerdo.
+#' @param config_climatica Lista com `modelo` (Af, Aw, Awi, AsAw ou AsAwi),
+#'   `colunas` e `limiares`. As duas ultimas listas devem ser nomeadas com
+#'   temp_min, umid_max e/ou umid_min, conforme o modelo. Informe os parametros
+#'   oficiais do municipio. NULL usa Af/tempmin/18 com aviso de compatibilidade.
 #' @param executar_nowcasting Se TRUE, solicita ajuste opcional de nowcasting.
 #' @param overwrite Se `TRUE`, sobrescreve `output_qmd` quando ele ja existe.
 #' @param render Se `TRUE`, renderiza o QMD apos cria-lo.
@@ -71,7 +75,11 @@ criar_qmd_boletim <- function(
     logo_direita = NULL,
     overwrite = FALSE,
     render = FALSE,
-    executar_nowcasting = FALSE) {
+    executar_nowcasting = FALSE,
+    config_climatica = NULL) {
+
+  clima_legado <- is.null(config_climatica)
+  config_climatica <- normalizar_config_climatica(config_climatica)
 
   for (nome in c("municipio_nome", "uf", "output_qmd", "notificacoes_path", "referencia_path",
                  "col_bairro_ref", "col_bairro_id_ref", "col_distrito_ref", "col_pop_ref", "col_geometry_ref",
@@ -140,6 +148,8 @@ criar_qmd_boletim <- function(
     nome_agregacao_plural = nome_agregacao_plural,
     limiar_completude = limiar_completude,
     executar_nowcasting = executar_nowcasting,
+    config_climatica = as.character(jsonlite::toJSON(config_climatica, auto_unbox = TRUE)),
+    clima_legado = clima_legado,
     logo_esquerda_arquivo = "logo1.png",
     logo_direita_arquivo = if (is.null(logo_direita)) "" else "logo2.png"
   )

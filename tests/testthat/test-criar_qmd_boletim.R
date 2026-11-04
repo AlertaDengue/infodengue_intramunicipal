@@ -5,6 +5,8 @@ argumentos_boletim <- function() {
        notificacoes_path = file.path(base, "notificacoes.csv"),
        historico_alerta_path = file.path(base, "historico_alerta.csv"),
        referencia_path = file.path(base, "historico_alerta.csv"),
+       config_climatica = list(modelo = "Af", colunas = list(temp_min = "tempmin"),
+                               limiares = list(temp_min = 18)),
        limiar_preseason = 5, limiar_epidemico = 50, limiar_posseason = 10)
 }
 test_that("gerador valida parametros e entrega caminhos absolutos sem marcadores", {
@@ -53,5 +55,23 @@ test_that("logo oficial e fixo e somente o logo direito e opcional", {
 
   a$output_qmd <- file.path(pasta, "invalido.qmd"); writeLines("nao png", logo); a$logo_direita <- logo
   expect_error(do.call(criar_qmd_boletim, a), "PNG valido")
+  expect_false(file.exists(a$output_qmd))
+})
+
+test_that("gerador registra configuracao climatica e sinaliza compatibilidade", {
+  a <- argumentos_boletim()
+  a$config_climatica <- list(modelo = "AsAw", colunas = list(temp_min = 'temp"min', umid_max = "umidmax"),
+                             limiares = list(temp_min = 20, umid_max = 75))
+  path <- do.call(criar_qmd_boletim, a)
+  yaml <- yaml::yaml.load(strsplit(paste(readLines(path), collapse = "\n"), "---", fixed = TRUE)[[1]][2])$params
+  expect_equal(jsonlite::fromJSON(yaml$config_climatica, simplifyVector = FALSE), a$config_climatica)
+  expect_false(yaml$clima_legado)
+  a$output_qmd <- tempfile(fileext = ".qmd"); a$config_climatica <- NULL
+  expect_warning(path <- do.call(criar_qmd_boletim, a), "legado Af")
+  yaml <- yaml::yaml.load(strsplit(paste(readLines(path), collapse = "\n"), "---", fixed = TRUE)[[1]][2])$params
+  expect_true(yaml$clima_legado)
+  a$config_climatica <- list(modelo = "Aw")
+  a$output_qmd <- tempfile(fileext = ".qmd")
+  expect_error(do.call(criar_qmd_boletim, a), "somente modelo")
   expect_false(file.exists(a$output_qmd))
 })

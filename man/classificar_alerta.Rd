@@ -25,6 +25,11 @@ Data frame com duas novas colunas:
 Classifica os níveis de alerta epidemiológico utilizando o modelo
 definido no objeto \code{params} e a função \code{AlertTools::fouralert()}.
 }
+\details{
+Quando data inclui clima_favoravel, semanas com NA recebem nivel e
+receptivo indisponiveis. A persistencia reinicia apos lacunas climaticas
+ou semanas ausentes, sem repetir o clima anterior.
+}
 \examples{
 \dontrun{
 classificar_alerta(dados_rt, params)

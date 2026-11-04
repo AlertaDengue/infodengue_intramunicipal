@@ -83,14 +83,15 @@ outra doença. Semanas duplicadas por agravo são rejeitadas.
 | `p_inc100k` | Sim | Incidência municipal, não negativa |
 | `nivel` | Sim | Nível de alerta de 1 a 4; pode conter NA |
 | `Rt` | Sim | Número reprodutivo; pode conter NA |
-| `tempmin` | Sim | Temperatura mínima; pode conter NA |
+| Colunas climáticas | Conforme o modelo | Temperatura mínima e/ou umidade mínima/máxima, configuradas em `config_climatica`; podem conter NA |
 | `arbo` | No arquivo único | Identificação do agravo |
 | `casos_est` | Não | Estimativa fornecida no histórico; sem ela a tabela indica “Indisponível” |
 | `receptivo` | Não | Indicador de receptividade fornecido no histórico; ausente permanece NA |
 | `lwr`, `upr` | Não | Limites do intervalo do Rt; ausência não cria bandas artificiais |
 
 Casos observados nunca são rotulados automaticamente como estimativas.
-A receptividade climática é desenhada a partir de `tempmin`. O histórico municipal
+O gráfico climático usa as variáveis e os limiares de `config_climatica`.
+Ele não substitui o indicador municipal `receptivo`. O histórico municipal
 é uma fonte separada das notificações; totais e semanas podem divergir e devem
 ser conciliados pela equipe responsável. As curvas de dengue usam início dos
 sintomas; tabelas submunicipais e perdas usam a semana de notificação.
@@ -166,6 +167,10 @@ criar_qmd_boletim(
   limiar_completude = 70,
   nome_unidade_local = "bairro", nome_unidade_local_plural = "bairros",
   nome_agregacao = "distrito", nome_agregacao_plural = "distritos",
+  config_climatica = list(
+    modelo = "Af", colunas = list(temp_min = "tempmin"),
+    limiares = list(temp_min = 18) # Demonstrativo; confirme os parâmetros municipais.
+  ),
   executar_nowcasting = FALSE, overwrite = TRUE
 )
 ```
@@ -194,6 +199,85 @@ Os cenários `misto`, `chikungunya`, `vazio` e `logos` são derivados determiní
 dos dados sintéticos; `nowcasting` solicita o ajuste opcional. Não são dados
 reais de chikungunya. No conjunto original, 6.921 notificações são alocadas e
 conservadas na grade; 289 não são alocadas.
+
+## Configuração climática municipal
+
+Informe `config_climatica` em `criar_qmd_boletim()` com os parâmetros oficiais
+do município. O pacote não escolhe o modelo pela localização nem estima limiares.
+Os exemplos abaixo são **sintéticos**, não são parâmetros confirmados de Joinville,
+Fortaleza ou Distrito Federal.
+
+```r
+# Temperatura mínima apenas
+clima_temperatura <- list(
+  modelo = "Af", colunas = list(temp_min = "tempmin"),
+  limiares = list(temp_min = 18)
+)
+
+# Umidade máxima apenas: não exige coluna de temperatura
+clima_umidade <- list(
+  modelo = "Aw", colunas = list(umid_max = "umidmax"),
+  limiares = list(umid_max = 70)
+)
+
+# Temperatura mínima E umidade máxima
+clima_combinado <- list(
+  modelo = "AsAw", colunas = list(temp_min = "tempmin", umid_max = "umidmax"),
+  limiares = list(temp_min = 18, umid_max = 70)
+)
+# Passe, por exemplo, config_climatica = clima_combinado ao gerador.
+```
+
+| Modelo AlertTools | Chaves exigidas em `colunas` e `limiares` |
+| --- | --- |
+| `Af` | `temp_min` |
+| `Aw` | `umid_max` |
+| `Awi` | `umid_min` |
+| `AsAw` | `temp_min` e `umid_max` |
+| `AsAwi` | `temp_min` e `umid_min` |
+
+Os valores de `colunas` são os nomes reais no histórico de entrada. Temperatura
+é expressa em °C e umidade em percentual (0 a 100). A preparação preserva as
+colunas originais e adiciona nomes canônicos e `clima_favoravel`; rejeita colisões
+com dados diferentes. O QMD registra a configuração para reprodução do boletim.
+`preparar_historico_alerta()` e `create_receptivity_plot_novo()` também recebem
+`config_climatica`, assim como o alias `criar_grafico_receptividade_novo()`.
+
+Todas as variáveis selecionadas devem ser **estritamente maiores** que seus
+limiares na mesma semana, como nas regras do AlertTools. A igualdade não é
+favorável. O gráfico apresenta as últimas 53 semanas consecutivas, com painéis
+separados e escalas próprias para temperatura e umidade. Azul indica condição
+conjunta favorável, cinza desfavorável e amarelo-claro indisponibilidade.
+
+Uma coluna exigida ausente ou com valores inválidos interrompe a execução.
+Se faltar o valor de qualquer variável climática em uma semana, a condição
+climática, a receptividade e o nível de alerta **submunicipais** ficam
+indisponíveis. Nos alertas, a persistência temporal reinicia após a lacuna,
+sem repetir o clima da semana anterior. Rt continua calculado na série completa.
+
+A condição do gráfico considera somente clima. O `receptivo` calculado pelo
+AlertTools também considera presença de casos; o nível inclui critérios de
+transmissão, incidência e persistência próprios do modelo. Os níveis e o
+`receptivo` municipais recebidos no histórico são preservados. Aplicar parâmetros
+municipais aos agrupamentos não significa que foram calibrados por distrito.
+
+Para compatibilidade, omitir `config_climatica` ainda seleciona `Af`, `tempmin`
+e 18 °C, com aviso e nota visível no boletim para confirmar esses parâmetros.
+Os argumentos antigos `limiar_temp`/`temp_col` do gráfico (e os equivalentes em
+português) continuam aceitos com aviso, mas não podem ser combinados com a nova
+configuração. O comparador do gráfico foi corrigido de `>=` para `>`; resultados
+no limite podem mudar. A função antiga `create_receptivity_plot()` permanece
+obsoleta. Regere os QMDs antigos: atualizar o pacote não atualiza seu conteúdo.
+
+Para reproduzir os cenários sintéticos:
+
+```sh
+Rscript tools/verificar_boletim.R /tmp/clima-temperatura clima-temperatura validar
+Rscript tools/verificar_boletim.R /tmp/clima-umidade clima-umidade validar
+Rscript tools/verificar_boletim.R /tmp/clima-combinado clima-combinado validar
+Rscript tools/verificar_boletim.R /tmp/clima-ausente clima-ausente validar
+# Troque validar por pdf para gerar o PDF.
+```
 
 ## Logos, limiares e métodos
 

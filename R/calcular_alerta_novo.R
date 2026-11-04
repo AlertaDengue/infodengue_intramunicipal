@@ -66,6 +66,9 @@ calcular_rt <- function(data, gtdist = "normal", meangt = 3, sdgt = 1) {
 #' previamente calculado.
 #' @param params Lista de parâmetros utilizados no modelo de alerta.
 #' @param criteria_fn Funcao que constroi os criterios; padrao AlertTools::setCriteria.
+#' @details Quando data inclui clima_favoravel, semanas com NA recebem nivel e
+#'   receptivo indisponiveis. A persistencia reinicia apos lacunas climaticas
+#'   ou semanas ausentes, sem repetir o clima anterior.
 #'
 #' @return Data frame com duas novas colunas:
 #' \itemize{
@@ -85,16 +88,34 @@ classificar_alerta <- function(data, params, criteria_fn = AlertTools::setCriter
     criteria_fn = criteria_fn
   )
 
-  resultado <- AlertTools::fouralert(
-    data,
-    crit = criteria
-  )
-
-  data |>
-    dplyr::mutate(
-      nivel = resultado$indices$level,
-      receptivo = resultado$indices$cytrue
-    )
+  if (!"clima_favoravel" %in% names(data)) {
+    resultado <- AlertTools::fouralert(data, crit = criteria)
+    data$nivel <- resultado$indices$level
+    data$receptivo <- resultado$indices$cytrue
+    return(data)
+  }
+  # O AlertTools repete ausentes por padrao. Blocos completos evitam imputar
+  # clima e reiniciam a persistencia depois de lacunas, inclusive semanas
+  # ausentes na serie de entrada. Rt continua calculado na serie completa.
+  completo <- !is.na(data$clima_favoravel)
+  inicio <- completo & !dplyr::lag(completo, default = FALSE)
+  if ("sem_not" %in% names(data) && nrow(data) > 1L) {
+    datas <- inicio_semana_epi(data$sem_not)
+    inicio[-1] <- inicio[-1] | (completo[-1] & as.integer(diff(datas)) != 7L)
+  }
+  blocos <- cumsum(inicio)
+  niveis <- rep(NA_integer_, nrow(data))
+  receptivos <- rep(NA_real_, nrow(data))
+  for (id in unique(blocos[completo])) {
+    linhas <- which(completo & blocos == id)
+    entrada <- data[linhas, setdiff(names(data), "nivel"), drop = FALSE]
+    resultado <- AlertTools::fouralert(entrada, crit = criteria)
+    niveis[linhas] <- resultado$indices$level
+    receptivos[linhas] <- resultado$indices$cytrue
+  }
+  data$nivel <- niveis
+  data$receptivo <- receptivos
+  data
 
 }
 
