@@ -33,7 +33,10 @@ criar_qmd_boletim(
   overwrite = FALSE,
   render = FALSE,
   executar_nowcasting = FALSE,
-  config_climatica = NULL
+  config_climatica = NULL,
+  limiar_preseason_chik = NULL,
+  limiar_epidemico_chik = NULL,
+  limiar_posseason_chik = NULL
 )
 }
 \arguments{
@@ -101,6 +104,10 @@ pacote e sempre copiado como \code{logo1.png} para o cabecalho esquerdo.}
 \code{colunas} e \code{limiares}. As duas ultimas listas devem ser nomeadas com
 temp_min, umid_max e/ou umid_min, conforme o modelo. Informe os parametros
 oficiais do municipio. NULL usa Af/tempmin/18 com aviso de compatibilidade.}
+
+\item{limiar_preseason_chik, limiar_epidemico_chik, limiar_posseason_chik}{Limiares MEM especificos para chikungunya. Cada valor NULL usa o limiar
+correspondente de dengue. Devem ser finitos e nao negativos; o limiar
+epidemico nao pode ser menor que os outros dois.}
 }
 \value{
 Caminho normalizado do arquivo QMD criado, invisivelmente.

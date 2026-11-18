@@ -27,6 +27,10 @@
 #' @param limiar_preseason,limiar_epidemico,limiar_posseason Limiares de
 #'   incidencia semanal (casos por 100 mil habitantes) do municipio, calculados
 #'   pelo InfoDengue a partir da serie historica (MEM).
+#' @param limiar_preseason_chik,limiar_epidemico_chik,limiar_posseason_chik
+#'   Limiares MEM especificos para chikungunya. Cada valor NULL usa o limiar
+#'   correspondente de dengue. Devem ser finitos e nao negativos; o limiar
+#'   epidemico nao pode ser menor que os outros dois.
 #' @param nome_unidade_local,nome_unidade_local_plural Nome da unidade local
 #'   usado nos textos (ex.: `"bairro"`, `"bairros"`).
 #' @param nome_agregacao,nome_agregacao_plural Nome do agrupamento usado nos
@@ -76,10 +80,17 @@ criar_qmd_boletim <- function(
     overwrite = FALSE,
     render = FALSE,
     executar_nowcasting = FALSE,
-    config_climatica = NULL) {
+    config_climatica = NULL,
+    limiar_preseason_chik = NULL,
+    limiar_epidemico_chik = NULL,
+    limiar_posseason_chik = NULL) {
 
   clima_legado <- is.null(config_climatica)
   config_climatica <- normalizar_config_climatica(config_climatica)
+
+  if (is.null(limiar_preseason_chik)) limiar_preseason_chik <- limiar_preseason
+  if (is.null(limiar_epidemico_chik)) limiar_epidemico_chik <- limiar_epidemico
+  if (is.null(limiar_posseason_chik)) limiar_posseason_chik <- limiar_posseason
 
   for (nome in c("municipio_nome", "uf", "output_qmd", "notificacoes_path", "referencia_path",
                  "col_bairro_ref", "col_bairro_id_ref", "col_distrito_ref", "col_pop_ref", "col_geometry_ref",
@@ -87,7 +98,8 @@ criar_qmd_boletim <- function(
     validar_escalar_texto(get(nome), nome)
   }
   for (nome in c("municipio_geocodigo", "ano", "populacao", "limiar_preseason", "limiar_epidemico",
-                 "limiar_posseason", "limiar_completude")) {
+                 "limiar_posseason", "limiar_completude", "limiar_preseason_chik",
+                 "limiar_epidemico_chik", "limiar_posseason_chik")) {
     valor <- get(nome)
     if (!is.numeric(valor) || length(valor) != 1L || !is.finite(valor)) stop(nome, " deve ser numerico escalar finito.", call. = FALSE)
   }
@@ -96,6 +108,10 @@ criar_qmd_boletim <- function(
   if (any(c(limiar_preseason, limiar_epidemico, limiar_posseason) < 0) ||
       limiar_epidemico < max(limiar_preseason, limiar_posseason) ||
       limiar_completude < 0 || limiar_completude > 100) stop("Limiares invalidos: confira incidencia e completude (0 a 100).", call. = FALSE)
+  if (any(c(limiar_preseason_chik, limiar_epidemico_chik, limiar_posseason_chik) < 0) ||
+      limiar_epidemico_chik < max(limiar_preseason_chik, limiar_posseason_chik)) {
+    stop("Limiares de chikungunya invalidos: devem ser nao negativos e o epidemico deve ser maior ou igual aos demais.", call. = FALSE)
+  }
   for (nome in c("overwrite", "render", "executar_nowcasting")) {
     x <- get(nome)
     if (!is.logical(x) || length(x) != 1L || is.na(x)) stop(nome, " deve ser TRUE ou FALSE.", call. = FALSE)
@@ -142,6 +158,9 @@ criar_qmd_boletim <- function(
     limiar_preseason = limiar_preseason,
     limiar_epidemico = limiar_epidemico,
     limiar_posseason = limiar_posseason,
+    limiar_preseason_chik = limiar_preseason_chik,
+    limiar_epidemico_chik = limiar_epidemico_chik,
+    limiar_posseason_chik = limiar_posseason_chik,
     nome_unidade_local = nome_unidade_local,
     nome_unidade_local_plural = nome_unidade_local_plural,
     nome_agregacao = nome_agregacao,

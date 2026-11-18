@@ -28,15 +28,15 @@ quarto install tinytex
 
 Os templates verificam as dependências R e não instalam pacotes durante a
 renderização. `arrow` é opcional para arquivos Parquet. Para habilitar
-`executar_nowcasting = TRUE`, instale a versão mais recente do `nowcaster`
-diretamente do GitHub, que inclui o modelo `nowcasting_mgcv()` (sem INLA):
+`executar_nowcasting = TRUE`, use `mgcv` >= 1.8-41, que oferece os termos
+de suavização do modelo conjunto (sem INLA):
 
 ```r
-remotes::install_github("covid19br/nowcaster", dependencies = NA, upgrade = "never")
+install.packages("mgcv")
 ```
 
-`Suggests` não é instalado obrigatoriamente junto com o pacote. O comando acima
-instala as dependências obrigatórias do nowcaster, sem solicitar o INLA opcional.
+`Suggests` não é instalado obrigatoriamente junto com o pacote. Confira a versão
+instalada com `packageVersion("mgcv")`.
 
 ## Dados de entrada
 
@@ -52,11 +52,16 @@ e `nm_bairro` como texto, incluindo zeros à esquerda e sufixos.
 | Coluna | Conteúdo |
 | --- | --- |
 | `municipio_geocodigo` | Identificador do município |
-| `nu_notific` | Identificador da notificação; único por agravo |
+| `nu_notific` | Número da notificação; pode se repetir em datas distintas |
 | `cid10_codigo` | `A90` para dengue, `A920` ou `A92.0` para chikungunya |
 | `ano_notif`, `se_notif` | Ano e semana epidemiológicos informados |
 | `dt_notific`, `dt_sin_pri`, `dt_digita` | Datas ISO (`YYYY-MM-DD`); início dos sintomas e digitação podem ser ausentes |
 | `id_bairro`, `nm_bairro` | Identificação da unidade local; ausência pode impedir alocação |
+
+Duplicatas são identificadas pela combinação de número, data de notificação,
+agravo e município. Cada registro recebe um identificador interno para preservar
+notificações distintas no pareamento, nas contagens e nos mapas. O recorte usa
+o ano solicitado e os dois anteriores.
 
 Os códigos de semanas usam domingo como início e a regra de quatro dias
 (`lubridate::epiyear()`/`epiweek()`). Anos com SE 53 são preservados.
@@ -87,7 +92,7 @@ outra doença. Semanas duplicadas por agravo são rejeitadas.
 | `arbo` | No arquivo único | Identificação do agravo |
 | `casos_est` | Não | Estimativa fornecida no histórico; sem ela a tabela indica “Indisponível” |
 | `receptivo` | Não | Indicador de receptividade fornecido no histórico; ausente permanece NA |
-| `lwr`, `upr` | Não | Limites do intervalo do Rt; ausência não cria bandas artificiais |
+| `lwr`, `upr` | Não | Limites opcionais no histórico; o gráfico municipal recalcula Rt e IC 95% |
 
 Casos observados nunca são rotulados automaticamente como estimativas.
 O gráfico climático usa as variáveis e os limiares de `config_climatica`.
@@ -95,6 +100,9 @@ Ele não substitui o indicador municipal `receptivo`. O histórico municipal
 é uma fonte separada das notificações; totais e semanas podem divergir e devem
 ser conciliados pela equipe responsável. As curvas de dengue usam início dos
 sintomas; tabelas submunicipais e perdas usam a semana de notificação.
+O gráfico municipal de Rt usa `AlertTools::Rt()` sobre `casos_est`, com `casos`
+nas semanas sem estimativa. Rt e IC 95% são calculados na mesma série, com
+intervalo de geração específico por agravo; os indicadores do histórico são preservados.
 
 ### Referência espacial
 
@@ -294,13 +302,32 @@ usuária fornece seus limiares municipais. Eles não são automaticamente aplica
 como limiares de cada agrupamento. `limiar_completude` é percentual de 0 a 100,
 com padrão 70. Nomes de unidades e agrupamentos têm argumentos para singular e plural.
 
+Chikungunya admite `limiar_preseason_chik`, `limiar_epidemico_chik` e
+`limiar_posseason_chik`, com a mesma validação dos limiares de dengue. Cada
+argumento omitido ou NULL herda o valor correspondente de dengue. Os valores
+por agravo aparecem na tabela e no limiar epidêmico do gráfico municipal,
+e são encaminhados ao cálculo de alerta do respectivo agravo:
+
+```r
+# Acrescente à chamada de criar_qmd_boletim(); valores apenas demonstrativos.
+limiar_preseason_chik = 2,
+limiar_epidemico_chik = 20,
+limiar_posseason_chik = 4
+```
+
 O nowcasting vem desabilitado por padrão. Se solicitado, o boletim identifica
-por unidade os estados desabilitado, indisponível, sem dados, ajustado ou falha.
+por unidade os estados desabilitado, indisponível, sem dados, ajustado,
+descartado por intervalo instável ou falha.
 Falhas não são tratadas como ajustes bem-sucedidos. A curva apresenta o ajuste
-quando disponível; a tabela municipal usa `casos_est` do histórico. O pacote
-usa `nowcaster::nowcasting_mgcv()` e não precisa do INLA. Dependências não são
-instaladas durante a renderização. A janela máxima de atraso é de 15 semanas,
-conforme o padrão do nowcaster para esse modelo.
+quando disponível; a tabela municipal usa `casos_est` do histórico. O modelo
+binomial negativo usa `mgcv`, com tendência e atraso comuns e desvios penalizados
+por agrupamento. Há um ajuste municipal separado e um ajuste conjunto para os
+agrupamentos, com janela de 30 semanas e atraso máximo adaptativo de 4 a 15
+semanas. As curvas por início de sintomas terminam na última semana completa
+da base de digitação, inclusive com nowcasting desabilitado. Sem datas de digitação,
+o ajuste fica indisponível e os casos observados são preservados. Intervalos instáveis
+são descartados e os casos observados continuam disponíveis. Dependências não
+são instaladas durante a renderização.
 
 ## API e migração
 

@@ -75,3 +75,45 @@ test_that("gerador registra configuracao climatica e sinaliza compatibilidade", 
   expect_error(do.call(criar_qmd_boletim, a), "somente modelo")
   expect_false(file.exists(a$output_qmd))
 })
+
+test_that("limiares de chikungunya sao escritos no QMD com heranca individual", {
+  for (especificos in list(list(),
+                          list(limiar_preseason_chik = 2, limiar_epidemico_chik = 20,
+                               limiar_posseason_chik = 4),
+                          list(limiar_epidemico_chik = 25))) {
+    a <- modifyList(argumentos_boletim(), especificos)
+    pasta <- tempfile(); dir.create(pasta)
+    a$output_qmd <- file.path(pasta, "boletim.qmd")
+    path <- do.call(criar_qmd_boletim, a)
+    qmd <- paste(readLines(path), collapse = "\n")
+    params <- yaml::yaml.load(strsplit(qmd, "---", fixed = TRUE)[[1]][2])$params
+    for (nome in c("limiar_preseason", "limiar_epidemico", "limiar_posseason")) {
+      chik <- paste0(nome, "_chik")
+      esperado <- if (is.null(a[[chik]])) a[[nome]] else a[[chik]]
+      expect_equal(params[[chik]], esperado)
+      expect_equal(params[[nome]], a[[nome]])
+    }
+    expect_false(grepl("{{", qmd, fixed = TRUE))
+    unlink(pasta, recursive = TRUE)
+  }
+})
+
+test_that("limiares invalidos de chikungunya falham antes de gravar", {
+  a <- argumentos_boletim()
+  for (nome in c("limiar_preseason_chik", "limiar_epidemico_chik", "limiar_posseason_chik")) {
+    for (valor in list(NA_real_, Inf, NaN, numeric(), c(1, 2), "2", TRUE)) {
+      invalido <- a; invalido[[nome]] <- valor
+      expect_error(do.call(criar_qmd_boletim, invalido), paste0(nome, " deve ser numerico"))
+      expect_false(file.exists(a$output_qmd))
+    }
+    invalido <- a; invalido[[nome]] <- -1
+    expect_error(do.call(criar_qmd_boletim, invalido), "Limiares de chikungunya invalidos")
+  }
+  for (limiares in list(list(limiar_preseason_chik = 51),
+                        list(limiar_posseason_chik = 51),
+                        list(limiar_epidemico_chik = 4))) {
+    expect_error(do.call(criar_qmd_boletim, modifyList(a, limiares)),
+                 "Limiares de chikungunya invalidos")
+    expect_false(file.exists(a$output_qmd))
+  }
+})
