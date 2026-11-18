@@ -1,5 +1,9 @@
 # infodengueintramunicipal (desenvolvimento)
 
+- Atualiza o template municipal: chave composta de duplicatas e identificador por registro nas alocações, contagens e mapas (#20).
+- Adiciona limiares MEM próprios para chikungunya, com validação e herança individual dos valores de dengue.
+- Usa nowcasting conjunto com mgcv, corte na última semana completa e proteção contra intervalos instáveis.
+- Recalcula Rt municipal e IC 95% sobre os casos estimados, usando os notificados quando a estimativa está ausente.
 - Adiciona config_climatica para cinco modelos do AlertTools, com variáveis e limiares municipais explícitos.
 - Histórico aceita modelos somente de umidade e preserva indicadores municipais; valida colunas e valores climáticos.
 - Gráfico usa condição conjunta, comparação estrita e painéis por variável; distingue semanas sem dados.

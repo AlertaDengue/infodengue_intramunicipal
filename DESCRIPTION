@@ -48,7 +48,7 @@ Imports:
 Suggests: 
     arrow,
     mockery,
-    nowcaster (>= 1.0.1),
+    mgcv (>= 1.8-41),
     quarto,
     testthat (>= 3.0.0),
     yaml,
@@ -56,7 +56,6 @@ Suggests:
 Config/testthat/edition: 3
 Depends: 
     R (>= 4.1)
-Remotes: AlertaDengue/AlertTools,
-    covid19br/nowcaster
+Remotes: AlertaDengue/AlertTools
 LazyData: true
 LazyDataCompression: xz
