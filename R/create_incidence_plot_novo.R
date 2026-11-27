@@ -87,7 +87,7 @@ create_incidence_plot_novo <- function(nowcast_data, observed_data, weeks_limit,
     (if (length(limiar_epidemico) == 1L && is.finite(limiar_epidemico)) ggplot2::geom_text(ggplot2::aes(x = 10, y = limiar_epidemico + 1, label = "Limiar Epid\u00eamico"))) +
     (if (nrow(nowcast_window)) ggplot2::scale_color_manual(
       name = NULL,
-      values = c("Nowcasting" = "red3"),
+      values = c("Nowcasting" = "#486CD9"),
       labels = c("Nowcasting" = "Nowcasting")
     )) +
     ggplot2::scale_fill_manual(

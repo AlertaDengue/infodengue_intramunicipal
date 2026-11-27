@@ -170,13 +170,14 @@ semana_epi <- function(x) lubridate::floor_date(x, "week", week_start = 7)
 #   so com os casos observados.
 # Devolve uma lista nomeada por unidade: list(total = ...) ou NULL.
 estados_nowcasting <- list()
-nowcast_unidades <- function(dados, fim, wdw = 30, n_amostras = 1000) {
+nowcast_unidades <- function(dados, fim, wdw = 30, n_amostras = 1000, prefixo = "", min_casos = 20) {
   unidades <- sort(unique(as.character(dados$unidade)))
   dados <- dados %>%
     filter(!is.na(dt_sin_pri), !is.na(dt_digita), dt_digita >= dt_sin_pri, dt_digita <= fim) %>%
     mutate(unidade = as.character(unidade))
   vazio <- stats::setNames(vector("list", length(unidades)), unidades)
-  marcar <- function(estado) for (u in unidades) estados_nowcasting[[u]] <<- estado
+  # estados identificados por agravo e unidade (ex.: "dengue - Centro")
+  marcar <- function(estado) for (u in unidades) estados_nowcasting[[paste0(prefixo, u)]] <<- estado
   if (!isTRUE(params$executar_nowcasting)) { marcar("desabilitado"); return(vazio) }
   if (!tem_mgcv_sz) { marcar("indisponivel (mgcv >= 1.8-41)"); return(vazio) }
   if (!nrow(dados)) { marcar("sem dados"); return(vazio) }
@@ -187,6 +188,10 @@ nowcast_unidades <- function(dados, fim, wdw = 30, n_amostras = 1000) {
       transmute(unidade, onset = semana_epi(dt_sin_pri), report = semana_epi(dt_digita)) %>%
       mutate(delay = as.integer(report - onset) %/% 7L) %>%
       filter(onset >= Tmax - 7 * wdw)
+    if (nrow(base) < min_casos) {
+      marcar(paste0("nao ajustado: menos de ", min_casos, " casos nas ultimas ", wdw, " semanas"))
+      return(vazio)
+    }
     n_atraso <- tabulate(base$delay + 1, nbins = 16)
     buraco <- which(n_atraso == 0)[1]
     Dmax <- if (is.na(buraco)) 15 else min(15, max(4, buraco - 2))
@@ -237,10 +242,10 @@ nowcast_unidades <- function(dados, fim, wdw = 30, n_amostras = 1000) {
       ref <- max(1, max_semanal$ref[max_semanal$unidade == u])
       antigas <- filter(r, onset < Tmax - 7 * 3)
       if (any(r$LS > 10 * ref, na.rm = TRUE) || any(antigas$LS > 3 * ref, na.rm = TRUE)) {
-        estados_nowcasting[[u]] <<- paste0("descartado: intervalo instavel (Dmax = ", Dmax, ")")
+        estados_nowcasting[[paste0(prefixo, u)]] <<- paste0("descartado: intervalo instavel (Dmax = ", Dmax, ")")
         return(NULL)
       }
-      estados_nowcasting[[u]] <<- paste0("ajustado (Dmax = ", Dmax, ")")
+      estados_nowcasting[[paste0(prefixo, u)]] <<- paste0("ajustado (Dmax = ", Dmax, ")")
       list(total = transmute(r, dt_event = onset, Median, LI, LS))
     })
   }, error = function(e) {
@@ -542,8 +547,9 @@ df_distritos <- bind_rows(
 ```
 
 ```{r nowcasting, include=FALSE}
-# Nowcasting de dengue (opcional), com o modelo conjunto (ver nowcast_unidades):
-# um ajuste para o municipio e um ajuste unico para todos os agrupamentos.
+# Nowcasting de dengue e chikungunya (opcional), com o modelo conjunto (ver
+# nowcast_unidades): para cada agravo, um ajuste para o municipio e um ajuste unico
+# para todos os agrupamentos.
 # Ultima semana = ultima semana epidemiologica completa pela data de digitacao; a
 # semana corrente, incompleta, fica fora das curvas por inicio de sintomas.
 ultima_digitacao <- if (any(!is.na(df_mun$dt_digita))) max(df_mun$dt_digita, na.rm = TRUE) else as.Date(NA)
@@ -552,36 +558,51 @@ fim_nowcast <- if (is.na(ultima_digitacao)) {
   max(df_mun$dt_notific, df_mun$dt_sin_pri, na.rm = TRUE)
 } else if (lubridate::wday(ultima_digitacao) == 7) ultima_digitacao else semana_epi(ultima_digitacao) - 1
 
-dados_nowcast <- df_mun %>%
-  filter(arbo == "dengue", !is.na(dt_sin_pri), lubridate::epiyear(dt_sin_pri) >= ano_atual - 2)
-
-niveis_mun <- dados_api %>%
-  filter(arbo == "dengue") %>%
-  select(ano_epi = SE, nivel)
-
-mun_nowcast <- formatar_nowcast(
-  nowcast_unidades(mutate(dados_nowcast, unidade = "municipio"), fim_nowcast)[["municipio"]],
-  semana_atual)
-mun_observados <- observados_por_semana(dados_nowcast, niveis_mun, ano_atual - 1, fim_nowcast)
-tem_nowcast <- nrow(mun_nowcast) > 0
-
 nomes_distritos <- sort(unique(ref_bairros$distrito))
-dados_nowcast_distritos <- df_mun_ok %>%
-  filter(arbo == "dengue", !is.na(dt_sin_pri), lubridate::epiyear(dt_sin_pri) >= ano_atual - 2) %>%
-  mutate(unidade = distrito)
-nowcast_distritos <- nowcast_unidades(dados_nowcast_distritos, fim_nowcast)
+rotulo_agravo <- c(dengue = "dengue", chikon = "chikungunya")
 
-distritos_nowcast <- purrr::map(nomes_distritos, function(d) {
-  if (is.null(estados_nowcasting[[d]])) estados_nowcasting[[d]] <<- "sem casos alocados"
-  niveis_d <- df_distritos %>%
-    filter(arbo == "dengue", distrito == d) %>%
-    select(ano_epi = sem_not, nivel)
+# Nowcast de um agravo: ajuste do municipio + ajuste conjunto dos agrupamentos
+nowcast_agravo <- function(agravo) {
+  prefixo <- paste0(rotulo_agravo[[agravo]], " - ")
+  dados_m <- df_mun %>%
+    filter(arbo == agravo, !is.na(dt_sin_pri), lubridate::epiyear(dt_sin_pri) >= ano_atual - 2)
+  niveis_m <- dados_api %>%
+    filter(arbo == agravo) %>%
+    select(ano_epi = SE, nivel)
+  ajuste_m <- nowcast_unidades(mutate(dados_m, unidade = "municipio"), fim_nowcast, prefixo = prefixo)
+
+  dados_d <- df_mun_ok %>%
+    filter(arbo == agravo, !is.na(dt_sin_pri), lubridate::epiyear(dt_sin_pri) >= ano_atual - 2) %>%
+    mutate(unidade = distrito)
+  ajuste_d <- nowcast_unidades(dados_d, fim_nowcast, prefixo = prefixo)
+
+  distritos <- purrr::map(nomes_distritos, function(d) {
+    chave <- paste0(prefixo, d)
+    if (is.null(estados_nowcasting[[chave]])) estados_nowcasting[[chave]] <<- "sem casos alocados"
+    niveis_d <- df_distritos %>%
+      filter(arbo == agravo, distrito == d) %>%
+      select(ano_epi = sem_not, nivel)
+    list(
+      nowcast = formatar_nowcast(ajuste_d[[d]], semana_atual),
+      observado = observados_por_semana(filter(dados_d, distrito == d), niveis_d, ano_atual - 1, fim_nowcast)
+    )
+  }) %>% setNames(nomes_distritos)
+
   list(
-    nowcast = formatar_nowcast(nowcast_distritos[[d]], semana_atual),
-    observado = observados_por_semana(filter(dados_nowcast_distritos, distrito == d),
-                                      niveis_d, ano_atual - 1, fim_nowcast)
+    mun_nowcast = formatar_nowcast(ajuste_m[["municipio"]], semana_atual),
+    mun_observados = observados_por_semana(dados_m, niveis_m, ano_atual - 1, fim_nowcast),
+    distritos = distritos
   )
-}) %>% setNames(nomes_distritos)
+}
+
+nowcast_dengue <- nowcast_agravo("dengue")
+nowcast_chikon <- if (tem_chikon) nowcast_agravo("chikon")
+
+# Nomes usados no restante do template (dengue)
+mun_nowcast <- nowcast_dengue$mun_nowcast
+mun_observados <- nowcast_dengue$mun_observados
+distritos_nowcast <- nowcast_dengue$distritos
+tem_nowcast <- nrow(mun_nowcast) > 0 || (tem_chikon && nrow(nowcast_chikon$mun_nowcast) > 0)
 ```
 
 ```{r gerar_graficos, include=FALSE}
@@ -641,24 +662,17 @@ rf_inc_mun_dengon <- create_incidence_plot_novo(
 )
 
 rf_inc_mun_chikon <- if (tem_chikon) {
-  dados_api %>%
-    filter(arbo == "chikon", SE >= min(ultimas_semanas_epi(semana_atual, 53)), SE <= semana_atual) %>%
-    mutate(nivel = factor(nivel)) %>%
-    ggplot() +
-    geom_ribbon(aes(x = factor(SE), ymin = 0, ymax = p_inc100k, fill = nivel, group = 1), alpha = 0.3) +
-    geom_line(aes(x = factor(SE), y = p_inc100k, group = 1), color = "steelblue", linewidth = 1) +
-    geom_hline(yintercept = limiares_mem$chikon[["epidemico"]], color = "red", linetype = "dashed") +
-    scale_fill_manual(
-      name = NULL,
-      values = c("1" = "green", "2" = "yellow", "3" = "orange", "4" = "red"),
-      labels = c("1" = "Baixo Risco", "2" = "Receptivo", "3" = "Transmissão", "4" = "Alta atividade"),
-      breaks = c("1", "2", "3", "4")
-    ) +
-    scale_x_discrete(breaks = breaks_1ano) +
-    theme_minimal() +
-    theme(legend.position = "top", axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(x = "Semanas epidemiológicas", y = "Incidência (casos por 100.000 hab.)",
-         title = paste0("Curva de incidência de chikungunya - ", cfg$municipio_nome, " até SE", week_atual))
+  create_incidence_plot_novo(
+    nowcast_data = nowcast_chikon$mun_nowcast,
+    observed_data = nowcast_chikon$mun_observados %>% filter(ano_epi <= semana_atual),
+    weeks_limit = semana_atual,
+    breaks_1ano = breaks_1ano,
+    limiar_epidemico = limiares_mem$chikon[["epidemico"]],
+    title_suffix = paste0("Curva de incidência de chikungunya - ", cfg$municipio_nome, " até SE", week_atual),
+    include_zoom = FALSE,
+    convert_to_incidence = TRUE,
+    pop = cfg$populacao
+  )
 }
 
 # @fig-clima - receptividade climatica
@@ -759,26 +773,19 @@ rf_map_distritos_dengon <- if (tem_dengue) mapa_agravo("dengue")
 
 # @fig-incidencia-chikon - curvas de incidencia de chikungunya por agrupamento
 if (tem_chikon) {
-  rf_inc_distritos_chikon <- df_distritos %>%
-    filter(arbo == "chikon", sem_not >= min(ultimas_semanas_epi(semana_atual, 53))) %>%
-    group_split(distrito) %>%
-    purrr::map(function(df_plot) {
-      ggplot(df_plot) +
-        geom_ribbon(aes(x = factor(sem_not), ymin = 0, ymax = inc, fill = factor(nivel), group = 1),
-                    alpha = 0.3) +
-        geom_line(aes(x = factor(sem_not), y = inc, group = 1), color = "steelblue", linewidth = 1) +
-        scale_fill_manual(
-          name = NULL,
-          values = c("1" = "green", "2" = "yellow", "3" = "orange", "4" = "red"),
-          labels = c("1" = "Baixo Risco", "2" = "Receptivo", "3" = "Transmissão", "4" = "Alta atividade"),
-          breaks = c("1", "2", "3", "4")
-        ) +
-        scale_x_discrete(breaks = breaks_1ano) +
-        theme_minimal() +
-        theme(legend.position = "top", axis.text.x = element_text(angle = 45, hjust = 1)) +
-        labs(x = "Semanas epidemiológicas", y = "Incidência (casos por 100.000 hab.)",
-             title = unique(df_plot$distrito))
-    })
+  rf_inc_distritos_chikon <- purrr::map(nomes_distritos, function(d) {
+    create_incidence_plot_novo(
+      nowcast_data = nowcast_chikon$distritos[[d]]$nowcast,
+      observed_data = nowcast_chikon$distritos[[d]]$observado %>% filter(ano_epi <= semana_atual),
+      weeks_limit = semana_atual,
+      breaks_1ano = breaks_1ano,
+      limiar_epidemico = NA_real_,   # limiar municipal nao se aplica ao agrupamento
+      title_suffix = d,
+      include_zoom = FALSE,
+      convert_to_incidence = TRUE,
+      pop = pop_distritos$pop[pop_distritos$distrito == d]
+    )
+  })
   rf_map_distritos_chikon <- mapa_agravo("chikon")
 }
 
@@ -1124,7 +1131,7 @@ if (length(estados_nowcasting)) {
   cat(paste0("- Estado do nowcasting por unidade: ", paste(paste(names(estados_nowcasting), unlist(estados_nowcasting), sep = ": "), collapse = "; "), ".\n\n"))
 }
 if (tem_nowcast) {
-  cat("-   Foi aplicado um modelo de nowcasting (correção da incidência atual em função do tempo até a notificação), ajustado em conjunto para todos os agrupamentos: a curva de atraso de digitação é comum, com desvios por agrupamento. O ajuste é exibido nas curvas de incidência, até a última semana epidemiológica completa; a semana corrente, incompleta, não aparece nessas curvas. A tabela municipal usa as estimativas fornecidas no histórico, quando disponíveis;\n\n")
+  cat("-   Foi aplicado um modelo de nowcasting (correção da incidência atual em função do tempo até a notificação), para dengue e chikungunya, ajustado em conjunto para todos os agrupamentos: a curva de atraso de digitação é comum, com desvios por agrupamento. O ajuste é exibido nas curvas de incidência, até a última semana epidemiológica completa; a semana corrente, incompleta, não aparece nessas curvas. A tabela municipal usa as estimativas fornecidas no histórico, quando disponíveis;\n\n")
 } else {
   cat("-   Não foi aplicado o modelo de nowcasting (correção da incidência atual em função do tempo até a notificação). A coluna de casos estimados usa somente estimativas informadas no histórico de alerta. Valores ausentes são identificados como indisponíveis;\n\n")
 }
