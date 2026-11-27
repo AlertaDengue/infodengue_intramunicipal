@@ -906,7 +906,7 @@ tabela_indicadores <- tibble::tribble(
   "Nível", "Nível de atenção para a situação da dengue calculado pelo Infodengue. Veja o Quadro de comparação do nível do Infodengue com os níveis do Plano de Contingência Nacional da Dengue do Ministério da Saúde."
 ) %>%
   kbl(booktabs = TRUE, align = c("l", "l"), linesep = "", col.names = NULL) %>%
-  kable_styling(latex_options = "basic", font_size = 10, position = "center") %>%
+  kable_styling(latex_options = c("basic","HOLD_position"), font_size = 10, position = "center") %>%
   column_spec(1, width = "4cm", bold = TRUE) %>%
   column_spec(2, width = "10cm")
 
@@ -1007,7 +1007,7 @@ Para a realização das análises foram utilizados os dados de notificação do 
 fig3
 ```
 
-Em `r ano_atual`, `r fmt(perda_total$perd)` das `r fmt(perda_total$notif)` notificações (`r fmt(perda_total$pct, 1)`%) não puderam ser alocadas em nenhum `r unid`. Foram identificadas `r n_divergencias_temporais` notificações com divergência entre data e código epidemiológico; os códigos informados foram preservados. Quando não há notificações alocadas de um agravo no ano analisado, seus níveis de alerta e Rt submunicipais ficam indisponíveis; zero alocado não significa ausência de casos no município. A @tbl-perdas apresenta o número de casos notificados e perdidos nas três últimas semanas epidemiológicas, e a @fig-perdas, a série do último ano.
+Em `r ano_atual`, `r fmt(perda_total$perd)` das `r fmt(perda_total$notif)` notificações (`r fmt(perda_total$pct, 1)`%) não puderam ser alocadas em nenhum `r unid`. Quando não há notificações alocadas de um agravo no ano analisado, seus níveis de alerta e Rt submunicipais ficam indisponíveis; zero alocado não significa ausência de casos no município. A @tbl-perdas apresenta o número de casos notificados e perdidos nas três últimas semanas epidemiológicas, e a @fig-perdas, a série do último ano.
 
 
 ```{r tbl-perdas}
@@ -1046,7 +1046,7 @@ A @tbl-limiares apresenta os limiares de incidência informados para o municípi
 tab_limiar
 ```
 
-A @fig-incidencia-municipal mostra a curva de incidência no município; as cores indicam o nível de alerta de cada semana, cuja relação com os níveis do Plano de Contingência Nacional está descrita no Anexo.
+A @fig-incidencia-municipal mostra a curva de incidência no município; as cores indicam o nível de alerta de cada semana.
 
 ```{r fig-incidencia-municipal, fig.cap=paste0("Curva de incidência ", leg_agravos, " em ", cfg$municipio_nome, " até a SE", week_atual, ". A linha vermelha horizontal indica o limiar epidêmico de cada agravo."), fig.width=7, fig.height=if (tem_chikon) 6 else 3.5, out.width="85%"}
 painel_agravos(rf_inc_mun_dengon, rf_inc_mun_chikon)
@@ -1150,12 +1150,4 @@ Este é um projeto desenvolvido com apoio da SVS/MS e Fiocruz e resulta da parce
 
 INFODENGUE. Boletim Semanal Municipal de `r cfg$municipio_nome` - Semana `r week_atual`/`r ano_atual`. Brasil, `r ano_atual`.
 
-## Anexo
 
-Para facilitar a tomada de decisão, o quadro mostra a relação entre os níveis de atenção do Infodengue e os níveis do Plano de Contingência Nacional para Controle da Dengue.
-
-**Quadro 1:** Relação entre os níveis de atenção do Infodengue e o Plano de Contingência Nacional para Controle da Dengue.
-
-```{r tabela_anexo}
-tabela_anexo
-```

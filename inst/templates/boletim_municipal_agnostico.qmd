@@ -209,7 +209,7 @@ dados_api <- dados_api %>%
 
 # Figura 1 - mapa da divisao local
 fig1 <- ggplot() +
-  geom_sf(data = ref_submunicipal, aes(fill = .data$distrito), color = "white", linewidth = 0.15) +
+  geom_sf(data = ref_submunicipal, aes(fill = .data$id_bairro), color = "white", linewidth = 0.15) +
   labs(fill = "Unidade") +
   theme_void() +
   theme(legend.position = "bottom")
